@@ -1,29 +1,38 @@
 <div class="services-container">
-  <c-card>
-    <c-card-header class="text-center">Gerenciar Serviços</c-card-header>
-    <c-card-body>
-      <button cButton color="primary" class="mb-3">Adicionar Serviço</button>
-      <c-table striped responsive>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Duração (min)</th>
-            <th>Preço</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let service of services">
-            <td>{{ service.name }}</td>
-            <td>{{ service.duration }}</td>
-            <td>{{ service.price | currency }}</td>
-            <td>
-              <button cButton color="warning">Editar</button>
-              <button cButton color="danger" (click)="delete(service.id)">Excluir</button>
-            </td>
-          </tr>
-        </tbody>
-      </c-table>
-    </c-card-body>
-  </c-card>
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title class="text-center">Gerenciar Serviços</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <button mat-raised-button color="primary" class="mb-3">Adicionar Serviço</button>
+      <p class="error-message" *ngIf="error">{{ error }}</p>
+      <mat-table [dataSource]="services">
+        <ng-container matColumnDef="name">
+          <mat-header-cell *matHeaderCellDef> Nome </mat-header-cell>
+          <mat-cell *matCellDef="let service"> {{ service.name }} </mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="description">
+          <mat-header-cell *matHeaderCellDef> Descrição </mat-header-cell>
+          <mat-cell *matCellDef="let service"> {{ service.description }} </mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="duration">
+          <mat-header-cell *matHeaderCellDef> Duração (min) </mat-header-cell>
+          <mat-cell *matCellDef="let service"> {{ service.duration }} </mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="price">
+          <mat-header-cell *matHeaderCellDef> Preço </mat-header-cell>
+          <mat-cell *matCellDef="let service"> {{ service.price | currency }} </mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <mat-header-cell *matHeaderCellDef> Ações </mat-header-cell>
+          <mat-cell *matCellDef="let service">
+            <button mat-raised-button color="warn">Editar</button>
+            <button mat-raised-button color="accent" (click)="delete(service.id)">Excluir</button>
+          </mat-cell>
+        </ng-container>
+        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+      </mat-table>
+    </mat-card-content>
+  </mat-card>
 </div>

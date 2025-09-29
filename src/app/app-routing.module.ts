@@ -10,7 +10,7 @@ import { AppointmentsComponent } from './pages/appointments/appointments.compone
 import { AuthGuard } from './guards/auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 
-const routes: Routes = [
+export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'hub', component: HubComponent, canActivate: [AuthGuard] },

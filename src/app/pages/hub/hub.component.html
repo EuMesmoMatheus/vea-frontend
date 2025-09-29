@@ -1,24 +1,34 @@
 <div class="hub-container">
-  <c-card class="hub-card">
-    <c-card-header class="text-center">Hub Empresarial</c-card-header>
-    <c-card-body>
-      <c-input-group class="mb-3">
-        <c-input-group-text><i class="c-icon cil-search"></i></c-input-group-text>
-        <input cFormControl placeholder="Filtrar por localização" [(ngModel)]="filterLocation" (input)="filter()">
-      </c-input-group>
+  <mat-card class="hub-card">
+    <mat-card-header>
+      <mat-card-title class="text-center">Hub Empresarial</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-form-field appearance="fill" class="full-width">
+        <mat-label>Filtrar por localização</mat-label>
+        <input matInput [(ngModel)]="filterLocation" (input)="filter()">
+      </mat-form-field>
       <p class="error-message" *ngIf="error">{{ error }}</p>
-      <c-row>
-        <c-col xs="12" md="6" lg="4" *ngFor="let company of companies">
-          <c-card class="company-card">
-            <c-card-header>{{ company.name }}</c-card-header>
-            <c-card-body>
-              <p><i class="c-icon cil-location-pin"></i> {{ company.location }}</p>
-              <p><i class="c-icon cil-phone"></i> {{ company.phone }}</p>
-              <button cButton color="primary" class="w-100">Agendar</button>
-            </c-card-body>
-          </c-card>
-        </c-col>
-      </c-row>
-    </c-card-body>
-  </c-card>
+      <mat-table [dataSource]="companies">
+        <ng-container matColumnDef="name">
+          <mat-header-cell *matHeaderCellDef> Nome </mat-header-cell>
+          <mat-cell *matCellDef="let company"> {{ company.name }} </mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="location">
+          <mat-header-cell *matHeaderCellDef> Localização </mat-header-cell>
+          <mat-cell *matCellDef="let company"> {{ company.location }} </mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="phone">
+          <mat-header-cell *matHeaderCellDef> Telefone </mat-header-cell>
+          <mat-cell *matCellDef="let company"> {{ company.phone }} </mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <mat-header-cell *matHeaderCellDef> Ações </mat-header-cell>
+          <mat-cell *matCellDef="let company"> <button mat-raised-button color="primary">Agendar</button> </mat-cell>
+        </ng-container>
+        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+      </mat-table>
+    </mat-card-content>
+  </mat-card>
 </div>

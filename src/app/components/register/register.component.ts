@@ -1,16 +1,19 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { MatCardModule } from '@angular/material/card';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { CardModule, NavModule, FormModule, ButtonModule } from '@coreui/angular';
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CardModule, NavModule, FormModule, ButtonModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  imports: [CommonModule, ReactiveFormsModule, MatCardModule, MatTabsModule, MatFormFieldModule, MatInputModule, MatButtonModule],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.scss']
 })
@@ -30,8 +33,8 @@ export class RegisterComponent {
     });
   }
 
-  onTypeChange(type: 'client' | 'company') {
-    this.type = type;
+  onTypeChange(index: number) {
+    this.type = index === 0 ? 'client' : 'company';
     if (this.type === 'company') {
       this.registerForm.controls.location.setValidators([Validators.required]);
     } else {

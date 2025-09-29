@@ -1,27 +1,37 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { CommonModule } from '@angular/common';
-import { CardModule, TableModule, ButtonModule } from '@coreui/angular';
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core'; // Para c-table
+import { MatCardModule } from '@angular/material/card';
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-appointments',
   standalone: true,
-  imports: [CommonModule, CardModule, TableModule, ButtonModule],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  imports: [CommonModule, MatCardModule, MatTableModule, MatButtonModule],
   templateUrl: './appointments.component.html',
   styleUrls: ['./appointments.component.scss']
 })
 export class AppointmentsComponent implements OnInit {
   appointments: any[] = [];
+  error = '';
+  displayedColumns: string[] = ['dateTime', 'status', 'actions'];
 
   constructor(private api: ApiService) {}
 
   ngOnInit() {
-    this.api.getAppointments().subscribe(data => this.appointments = data);
+    this.api.getAppointments().subscribe(
+      data => this.appointments = data,
+      error => this.error = 'Erro ao carregar agendamentos'
+    );
   }
 
   cancel(id: number) {
-    this.api.cancelAppointment(id).subscribe(() => this.ngOnInit());
+    if (confirm('Tem certeza que deseja cancelar?')) {
+      this.api.cancelAppointment(id).subscribe(
+        () => this.ngOnInit(),
+        error => this.error = 'Erro ao cancelar'
+      );
+    }
   }
 }
