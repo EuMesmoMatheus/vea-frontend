@@ -1,0 +1,23 @@
+.dashboard-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(to bottom, #FFB6C1 0%, #FFFFFF 100%);
+}
+
+.metric-card {
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(51, 51, 51, 0.1);
+  transition: transform 0.3s;
+
+  &:hover {
+    transform: translateY(-5px);
+  }
+}
+
+.c-card-header {
+  background-color: #FFB6C1;
+  color: #333333;
+  font-weight: bold;
+}

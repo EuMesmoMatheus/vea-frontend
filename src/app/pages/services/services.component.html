@@ -1,0 +1,29 @@
+<div class="services-container">
+  <c-card>
+    <c-card-header class="text-center">Gerenciar Serviços</c-card-header>
+    <c-card-body>
+      <button cButton color="primary" class="mb-3">Adicionar Serviço</button>
+      <c-table striped responsive>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Duração (min)</th>
+            <th>Preço</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let service of services">
+            <td>{{ service.name }}</td>
+            <td>{{ service.duration }}</td>
+            <td>{{ service.price | currency }}</td>
+            <td>
+              <button cButton color="warning">Editar</button>
+              <button cButton color="danger" (click)="delete(service.id)">Excluir</button>
+            </td>
+          </tr>
+        </tbody>
+      </c-table>
+    </c-card-body>
+  </c-card>
+</div>

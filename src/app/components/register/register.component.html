@@ -1,0 +1,42 @@
+<div class="register-container">
+  <c-card class="register-card">
+    <c-card-header class="text-center">VEA - Cadastro</c-card-header>
+    <c-card-body>
+      <c-nav variant="tabs" role="tablist">
+        <c-nav-item role="presentation" [active]="type === 'client'" (click)="onTypeChange('client')">Cliente</c-nav-item>
+        <c-nav-item role="presentation" [active]="type === 'company'" (click)="onTypeChange('company')">Empresa</c-nav-item>
+      </c-nav>
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+        <c-input-group class="mb-3" [class.input-invalid]="submitted && registerForm.controls.name.errors">
+          <c-input-group-text><i class="c-icon cil-user"></i></c-input-group-text>
+          <input cFormControl placeholder="Nome" formControlName="name">
+          <span class="error-message" *ngIf="submitted && registerForm.controls.name.errors.required">Nome obrigatório</span>
+        </c-input-group>
+        <c-input-group class="mb-3" [class.input-invalid]="submitted && registerForm.controls.email.errors">
+          <c-input-group-text><i class="c-icon cil-envelope-closed"></i></c-input-group-text>
+          <input cFormControl placeholder="E-mail" formControlName="email" type="email">
+          <span class="error-message" *ngIf="submitted && registerForm.controls.email.errors.required">E-mail obrigatório</span>
+          <span class="error-message" *ngIf="submitted && registerForm.controls.email.errors.email">E-mail inválido</span>
+        </c-input-group>
+        <c-input-group class="mb-3" [class.input-invalid]="submitted && registerForm.controls.phone.errors">
+          <c-input-group-text><i class="c-icon cil-phone"></i></c-input-group-text>
+          <input cFormControl placeholder="Telefone" formControlName="phone">
+          <span class="error-message" *ngIf="submitted && registerForm.controls.phone.errors.required">Telefone obrigatório</span>
+        </c-input-group>
+        <c-input-group class="mb-3" [class.input-invalid]="submitted && registerForm.controls.password.errors">
+          <c-input-group-text><i class="c-icon cil-lock-locked"></i></c-input-group-text>
+          <input cFormControl placeholder="Senha" formControlName="password" type="password">
+          <span class="error-message" *ngIf="submitted && registerForm.controls.password.errors.required">Senha obrigatória</span>
+        </c-input-group>
+        <c-input-group class="mb-3" *ngIf="type === 'company'" [class.input-invalid]="submitted && registerForm.controls.location.errors">
+          <c-input-group-text><i class="c-icon cil-location-pin"></i></c-input-group-text>
+          <input cFormControl placeholder="Localização" formControlName="location">
+          <span class="error-message" *ngIf="submitted && registerForm.controls.location.errors.required">Localização obrigatória</span>
+        </c-input-group>
+        <button cButton color="primary" type="submit" class="w-100">Cadastrar</button>
+        <p class="error-message" *ngIf="error">{{ error }}</p>
+      </form>
+      <p class="text-center mt-3"><a routerLink="/login">Já tem conta? Entrar</a></p>
+    </c-card-body>
+  </c-card>
+</div>

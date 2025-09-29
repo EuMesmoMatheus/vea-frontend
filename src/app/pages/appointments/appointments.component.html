@@ -1,0 +1,23 @@
+<div class="appointments-container">
+  <c-card>
+    <c-card-header class="text-center">Agendamentos</c-card-header>
+    <c-card-body>
+      <c-table striped responsive>
+        <thead>
+          <tr>
+            <th>Data/Hora</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let appointment of appointments">
+            <td>{{ appointment.dateTime | date:'medium' }}</td>
+            <td [ngClass]="{'confirmed': appointment.status === 'Confirmed', 'cancelled': appointment.status === 'Cancelled'}">{{ appointment.status }}</td>
+            <td><button cButton color="danger" (click)="cancel(appointment.id)" *ngIf="appointment.status !== 'Cancelled'">Cancelar</button></td>
+          </tr>
+        </tbody>
+      </c-table>
+    </c-card-body>
+  </c-card>
+</div>

@@ -1,0 +1,27 @@
+<div class="employees-container">
+  <c-card>
+    <c-card-header class="text-center">Gerenciar Funcionários</c-card-header>
+    <c-card-body>
+      <button cButton color="primary" class="mb-3">Adicionar Funcionário</button>
+      <c-table striped responsive>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let employee of employees">
+            <td>{{ employee.name }}</td>
+            <td>{{ employee.email }}</td>
+            <td>
+              <button cButton color="warning">Editar</button>
+              <button cButton color="danger" (click)="delete(employee.id)">Excluir</button>
+            </td>
+          </tr>
+        </tbody>
+      </c-table>
+    </c-card-body>
+  </c-card>
+</div>

@@ -1,0 +1,24 @@
+<div class="hub-container">
+  <c-card class="hub-card">
+    <c-card-header class="text-center">Hub Empresarial</c-card-header>
+    <c-card-body>
+      <c-input-group class="mb-3">
+        <c-input-group-text><i class="c-icon cil-search"></i></c-input-group-text>
+        <input cFormControl placeholder="Filtrar por localização" [(ngModel)]="filterLocation" (input)="filter()">
+      </c-input-group>
+      <p class="error-message" *ngIf="error">{{ error }}</p>
+      <c-row>
+        <c-col xs="12" md="6" lg="4" *ngFor="let company of companies">
+          <c-card class="company-card">
+            <c-card-header>{{ company.name }}</c-card-header>
+            <c-card-body>
+              <p><i class="c-icon cil-location-pin"></i> {{ company.location }}</p>
+              <p><i class="c-icon cil-phone"></i> {{ company.phone }}</p>
+              <button cButton color="primary" class="w-100">Agendar</button>
+            </c-card-body>
+          </c-card>
+        </c-col>
+      </c-row>
+    </c-card-body>
+  </c-card>
+</div>

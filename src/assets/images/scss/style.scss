@@ -1,0 +1,37 @@
+$primary: #FFB6C1;
+$secondary: #007BFF;
+$light: #FFFFFF;
+$dark: #333333;
+
+.c-header {
+  background-color: $primary;
+  color: $dark;
+}
+
+.c-button[color="primary"] {
+  background-color: $secondary;
+  border-color: $secondary;
+}
+
+.c-card {
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(51, 51, 51, 0.1);
+  transition: transform 0.3s;
+
+  &:hover {
+    transform: translateY(-5px);
+  }
+}
+
+body {
+  background-color: $light;
+}
+
+.error-message {
+  color: red;
+  font-size: 0.8rem;
+}
+
+.input-invalid {
+  border-color: red;
+}
