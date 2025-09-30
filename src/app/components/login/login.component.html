@@ -8,13 +8,13 @@
         <mat-form-field appearance="fill" class="full-width">
           <mat-label>E-mail</mat-label>
           <input matInput formControlName="email" type="email">
-          <mat-error *ngIf="submitted && loginForm.controls.email.errors?.required">E-mail obrigatório</mat-error>
-          <mat-error *ngIf="submitted && loginForm.controls.email.errors?.email">E-mail inválido</mat-error>
+          <mat-error *ngIf="submitted && loginForm.controls['email'].errors?.['required']">E-mail obrigatório</mat-error>
+          <mat-error *ngIf="submitted && loginForm.controls['email'].errors?.['email']">E-mail inválido</mat-error>
         </mat-form-field>
         <mat-form-field appearance="fill" class="full-width">
           <mat-label>Senha</mat-label>
           <input matInput formControlName="password" type="password">
-          <mat-error *ngIf="submitted && loginForm.controls.password.errors?.required">Senha obrigatória</mat-error>
+          <mat-error *ngIf="submitted && loginForm.controls['password'].errors?.['required']">Senha obrigatória</mat-error>
         </mat-form-field>
         <button mat-raised-button color="primary" type="submit" class="full-width">Entrar</button>
         <p class="error-message" *ngIf="error">{{ error }}</p>

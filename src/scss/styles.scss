@@ -1,18 +1,21 @@
-@use '@angular/material' as mat;
-$vea-primary: mat.define-palette(mat.$indigo-palette, 500, 100, 900); // Base para #007BFF (azul)
-$vea-accent: mat.define-palette(mat.$pink-palette, A200, A100, A400); // Base para #FFB6C1 (rosa claro)
-$vea-warn: mat.define-palette(mat.$red-palette);
+@import '~@angular/material/theming';
 
-$vea-theme: mat.define-light-theme((
+// Definir um tema básico
+$primary: mat-palette($mat-indigo);
+$accent: mat-palette($mat-pink);
+$warn: mat-palette($mat-red);
+
+$theme: mat-light-theme((
   color: (
-    primary: $vea-primary,
-    accent: $vea-accent,
-    warn: $vea-warn,
+    primary: $primary,
+    accent: $accent,
+    warn: $warn,
   )
 ));
 
-@include mat.all-component-themes($vea-theme);
+@include angular-material-theme($theme);
 
+// Sobrescrever cores específicas
 $custom-primary: #FFB6C1;
 $custom-secondary: #007BFF;
 $custom-text: #333333;
@@ -23,7 +26,7 @@ mat-card-header {
   color: $custom-text;
 }
 
-mat-button.mat-primary {
+.mat-button.mat-primary {
   background-color: $custom-secondary;
 }
 
@@ -33,7 +36,7 @@ body {
 }
 
 .error-message {
-  color: mat.get-color-from-palette($vea-warn);
+  color: red;
   text-align: center;
   margin-top: 8px;
 }

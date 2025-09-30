@@ -35,6 +35,7 @@ export class LoginComponent {
     this.api.login(this.loginForm.value.email, this.loginForm.value.password).subscribe(
       response => {
         localStorage.setItem('token', response.token);
+        console.log('Notificação simulada: Login bem-sucedido!');
         this.router.navigate(['/dashboard-admin']);
       },
       error => this.error = 'Credenciais inválidas ou erro no servidor'

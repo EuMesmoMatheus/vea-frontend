@@ -32,7 +32,6 @@
             ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "preserveSymlinks": true,
             "assets": [
               "src/favicon.ico",
               "src/assets"
@@ -41,12 +40,7 @@
               "src/scss/styles.scss"
             ],
             "scripts": [],
-            "allowedCommonJsDependencies": [],
-            "stylePreprocessorOptions": {
-              "sass": {
-                "silenceDeprecations": []
-              }
-            }
+            "allowedCommonJsDependencies": []
           },
           "configurations": {
             "production": {

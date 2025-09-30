@@ -4,6 +4,7 @@
   align-items: center;
   height: 100vh;
   background: linear-gradient(to bottom, #FFB6C1 0%, #FFFFFF 100%);
+  animation: fadeIn 1s ease-in;
 }
 
 .login-card {
@@ -26,4 +27,9 @@
   color: red;
   text-align: center;
   margin-top: 8px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

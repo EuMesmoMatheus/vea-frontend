@@ -10,6 +10,7 @@ import { AppointmentsComponent } from './pages/appointments/appointments.compone
 import { AuthGuard } from './guards/auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 
+// Exportar as rotas para uso externo
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },

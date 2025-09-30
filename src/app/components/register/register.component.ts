@@ -36,11 +36,11 @@ export class RegisterComponent {
   onTypeChange(index: number) {
     this.type = index === 0 ? 'client' : 'company';
     if (this.type === 'company') {
-      this.registerForm.controls.location.setValidators([Validators.required]);
+      this.registerForm.controls['location'].setValidators([Validators.required]);
     } else {
-      this.registerForm.controls.location.clearValidators();
+      this.registerForm.controls['location'].clearValidators();
     }
-    this.registerForm.controls.location.updateValueAndValidity();
+    this.registerForm.controls['location'].updateValueAndValidity();
   }
 
   onSubmit() {
@@ -48,8 +48,11 @@ export class RegisterComponent {
     if (this.registerForm.invalid) return;
 
     this.api.register(this.type === 'client' ? 'Auth/register/client' : 'Auth/register/company', this.registerForm.value).subscribe(
-      () => this.router.navigate(['/login']),
-      error => this.error = 'Erro ao cadastrar'
+      () => {
+        console.log('Notificação simulada: Cadastro bem-sucedido!');
+        this.router.navigate(['/login']);
+      },
+      error => this.error = 'Erro ao cadastrar (e-mail já existe ou erro no servidor)'
     );
   }
 }
