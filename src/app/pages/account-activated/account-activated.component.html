@@ -1,0 +1,39 @@
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50 animate-fade-in">
+  <div class="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white transform hover:scale-[1.02] transition-all duration-300 border border-gray-100">
+    <!-- Header com ícone de sucesso (pink-500 pra brand VEA, adaptado do verify-email) -->
+    <div class="text-center mb-8">
+      <div class="mx-auto w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center mb-4">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">VEA - Conta Ativada!</h2>
+      <p class="text-sm text-gray-600 mt-1">Bem-vindo ao hub empresarial intuitivo.</p>
+    </div>
+
+    <!-- Mensagem de sucesso (box pink-50, centralizado, do PDF resumo) -->
+    <div class="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-200">
+      <p class="text-sm text-pink-800 text-center">
+        {{ successMessage }}
+      </p>
+    </div>
+
+    <!-- Botão principal (adaptado do verify-email, com SVG seta) -->
+    <div class="space-y-4">
+      <button
+        (click)="goToLogin()"
+        class="w-full py-3 px-4 rounded-xl bg-pink-500 text-white font-medium hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-2"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+        </svg>
+        Ir para Login
+      </button>
+    </div>
+
+    <!-- Link de volta (adaptado do verify-email, pro dashboard) -->
+    <p class="text-center mt-6 text-sm text-gray-600">
+      Pronto para gerenciar? <a routerLink="/dashboard" class="font-medium text-pink-500 hover:text-pink-600 transition-colors">Ir para Dashboard</a>
+    </p>
+  </div>
+</div>

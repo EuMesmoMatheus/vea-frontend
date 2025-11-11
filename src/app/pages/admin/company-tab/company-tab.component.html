@@ -1,0 +1,134 @@
+<h2 class="text-2xl font-semibold text-gray-800 mb-6">Editar Dados da Empresa</h2>
+<form [formGroup]="companyForm" (ngSubmit)="updateCompany()" class="space-y-6">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Nome da Empresa</label>
+      <input id="name" formControlName="name" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent" [class.border-red-300]="submitted && companyForm.get('name')?.invalid">
+      <small *ngIf="submitted && companyForm.get('name')?.errors?.['required']" class="text-red-500 text-xs">O nome é obrigatório</small>
+      <small *ngIf="submitted && companyForm.get('name')?.errors?.['minlength']" class="text-red-500 text-xs">Mínimo 3 caracteres</small>
+    </div>
+    <div>
+      <label for="businessType" class="block text-sm font-medium text-gray-700 mb-2">Tipo de Negócio</label>
+      <select id="businessType" formControlName="businessType" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500">
+        <option value="">Selecione o tipo</option>
+        <option *ngFor="let type of businessTypes" [value]="type.value">{{ type.label }}</option>
+      </select>
+      <small *ngIf="submitted && companyForm.get('businessType')?.errors?.['required']" class="text-red-500 text-xs">Tipo é obrigatório</small>
+    </div>
+  </div>
+  <div class="space-y-4">
+    <h3 class="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Endereço</h3>
+    <div>
+      <label for="cep" class="block text-sm font-medium text-gray-700 mb-2">CEP *</label>
+      <input id="cep" formControlName="cep" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500" [class.border-red-300]="submitted && companyForm.get('cep')?.invalid" (input)="formatCep($event)" (blur)="buscarCep($event)" placeholder="00000-000">
+      <small *ngIf="submitted && companyForm.get('cep')?.errors?.['required']" class="text-red-500 text-xs">CEP obrigatório</small>
+      <small *ngIf="cepError" class="text-red-500 text-xs">{{ cepError }}</small>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label for="logradouro" class="block text-sm font-medium text-gray-700 mb-2">Logradouro *</label>
+        <input id="logradouro" formControlName="logradouro" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500" [class.border-red-300]="submitted && companyForm.get('logradouro')?.invalid" placeholder="Rua/Avenida">
+        <small *ngIf="submitted && companyForm.get('logradouro')?.errors?.['required']" class="text-red-500 text-xs">Logradouro obrigatório</small>
+      </div>
+      <div>
+        <label for="numero" class="block text-sm font-medium text-gray-700 mb-2">Número *</label>
+        <input id="numero" formControlName="numero" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500" [class.border-red-300]="submitted && companyForm.get('numero')?.invalid" placeholder="123">
+        <small *ngIf="submitted && companyForm.get('numero')?.errors?.['required']" class="text-red-500 text-xs">Número obrigatório</small>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label for="complemento" class="block text-sm font-medium text-gray-700 mb-2">Complemento</label>
+        <input id="complemento" formControlName="complemento" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500" placeholder="Apto/Bloco (opcional)">
+      </div>
+      <div>
+        <label for="bairro" class="block text-sm font-medium text-gray-700 mb-2">Bairro *</label>
+        <input id="bairro" formControlName="bairro" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500" [class.border-red-300]="submitted && companyForm.get('bairro')?.invalid" placeholder="Bairro">
+        <small *ngIf="submitted && companyForm.get('bairro')?.errors?.['required']" class="text-red-500 text-xs">Bairro obrigatório</small>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <label for="cidade" class="block text-sm font-medium text-gray-700 mb-2">Cidade *</label>
+        <input id="cidade" formControlName="cidade" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500" [class.border-red-300]="submitted && companyForm.get('cidade')?.invalid" placeholder="São Paulo">
+        <small *ngIf="submitted && companyForm.get('cidade')?.errors?.['required']" class="text-red-500 text-xs">Cidade obrigatória</small>
+      </div>
+      <div>
+        <label for="uf" class="block text-sm font-medium text-gray-700 mb-2">UF *</label>
+        <input id="uf" formControlName="uf" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 uppercase" [class.border-red-300]="submitted && companyForm.get('uf')?.invalid" placeholder="SP" maxlength="2">
+        <small *ngIf="submitted && companyForm.get('uf')?.errors?.['required']" class="text-red-500 text-xs">UF obrigatória</small>
+      </div>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
+      <input id="phone" formControlName="phone" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500" [class.border-red-300]="submitted && companyForm.get('phone')?.invalid" (input)="formatPhone($event)" placeholder="(11) 99999-9999">
+      <small *ngIf="submitted && companyForm.get('phone')?.errors?.['required']" class="text-red-500 text-xs">Telefone obrigatório</small>
+      <small *ngIf="submitted && companyForm.get('phone')?.errors?.['pattern']" class="text-red-500 text-xs">Formato inválido</small>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Horário de Funcionamento *</label>
+      <div class="flex items-center space-x-2">
+        <div class="flex-1">
+          <input id="startTime" formControlName="startTime" type="time" class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 text-sm" [class.border-red-300]="submitted && companyForm.get('startTime')?.invalid">
+        </div>
+        <span class="text-gray-400 px-2">-</span>
+        <div class="flex-1">
+          <input id="endTime" formControlName="endTime" type="time" class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 text-sm" [class.border-red-300]="submitted && companyForm.get('endTime')?.invalid">
+        </div>
+      </div>
+      <small *ngIf="submitted && (companyForm.get('startTime')?.invalid || companyForm.get('endTime')?.invalid)" class="text-red-500 text-xs">Horários obrigatórios</small>
+      <small class="text-gray-500 text-xs mt-1 block">Ex: Segunda a Sexta, das 10h às 18h</small>
+    </div>
+  </div>
+  <div>
+    <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Localização Completa (Visual)</label>
+    <input id="location" formControlName="location" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 bg-gray-50" placeholder="Rua das Flores, 123 - Vila Madalena, São Paulo - SP" readonly>
+    <small class="text-gray-500 text-xs mt-1 block">Atualiza auto com campos acima</small>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-2">Logo da Empresa</label>
+    <div class="space-y-3">
+      <div class="flex items-center space-x-4">
+        <img [src]="companyForm.get('logo')?.value || '/assets/vea-default-logo.png'" alt="Logo atual" title="Logo da Empresa" class="h-20 w-20 rounded-full object-cover border border-gray-200 shadow-md">
+        <div class="flex-1">
+          <input formControlName="logo" type="hidden">
+          <input #logoFile id="logoFile" type="file" (change)="onLogoUpload($event)" accept="image/*" class="hidden">
+          <button type="button" (click)="logoFile.click()" class="px-4 py-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition-all text-sm disabled:opacity-50" [disabled]="logoUploading">
+            {{ logoUploading ? 'Carregando...' : 'Alterar Logo' }}
+          </button>
+        </div>
+      </div>
+      <small *ngIf="logoError" class="text-red-500 text-xs">{{ logoError }}</small>
+    </div>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-2">Imagem de Capa</label>
+    <div class="space-y-3">
+      <div class="flex items-center space-x-4">
+        <img [src]="companyForm.get('coverImage')?.value || '/assets/default-cover.png'" alt="Capa atual" title="Imagem de Capa" class="h-24 w-48 rounded-xl object-cover border border-gray-200 shadow-md">
+        <div class="flex-1">
+          <input formControlName="coverImage" type="hidden">
+          <input #coverFile id="coverFile" type="file" (change)="onCoverUpload($event)" accept="image/*" class="hidden">
+          <button type="button" (click)="coverFile.click()" class="px-4 py-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition-all text-sm disabled:opacity-50" [disabled]="coverUploading">
+            {{ coverUploading ? 'Carregando...' : 'Alterar Capa' }}
+          </button>
+        </div>
+      </div>
+      <small *ngIf="coverError" class="text-red-500 text-xs">{{ coverError }}</small>
+    </div>
+  </div>
+  <!-- Botão com loading só nele (spinner + texto), sem overlay full -->
+  <button type="submit" [disabled]="buttonLoading || companyForm.invalid" class="w-full px-8 py-3 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition-all duration-300 font-semibold disabled:opacity-50 flex items-center justify-center space-x-2">
+    <span *ngIf="!buttonLoading">Salvar Alterações</span>
+    <div *ngIf="buttonLoading" class="flex items-center space-x-2">
+      <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span>Salvando...</span>
+    </div>
+  </button>
+</form>
+<!-- REMOVIDO: Todo o toast local e loading overlay (agora global via ToastGlobalComponent) -->

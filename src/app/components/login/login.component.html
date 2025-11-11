@@ -1,25 +1,114 @@
-<div class="login-container">
-  <mat-card class="login-card">
-    <mat-card-header>
-      <mat-card-title class="text-center">VEA - Login</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-        <mat-form-field appearance="fill" class="full-width">
-          <mat-label>E-mail</mat-label>
-          <input matInput formControlName="email" type="email">
-          <mat-error *ngIf="submitted && loginForm.controls['email'].errors?.['required']">E-mail obrigatório</mat-error>
-          <mat-error *ngIf="submitted && loginForm.controls['email'].errors?.['email']">E-mail inválido</mat-error>
-        </mat-form-field>
-        <mat-form-field appearance="fill" class="full-width">
-          <mat-label>Senha</mat-label>
-          <input matInput formControlName="password" type="password">
-          <mat-error *ngIf="submitted && loginForm.controls['password'].errors?.['required']">Senha obrigatória</mat-error>
-        </mat-form-field>
-        <button mat-raised-button color="primary" type="submit" class="full-width">Entrar</button>
-        <p class="error-message" *ngIf="error">{{ error }}</p>
+<!-- Overlay de loading full-screen - agora rosa como o tema do software -->
+<div *ngIf="initialLoading" class="fixed inset-0 bg-gradient-to-br from-pink-50 via-white to-pink-50 flex items-center justify-center z-50">
+  <div class="text-center">
+    <!-- Spinner clássico, mas rosa: círculo segmentado pink/branco -->
+    <div class="relative mx-auto w-16 h-16 mb-6">
+      <div class="absolute inset-0 rounded-full border-4 border-pink-100"></div>
+      <div class="absolute inset-0 rounded-full border-4 border-pink-500 border-t-transparent animate-spin"></div>
+    </div>
+    <!-- Texto "Carregando..." -->
+    <h2 class="text-2xl font-bold text-gray-900 tracking-wide">Carregando...</h2>
+    <p class="text-sm text-gray-500 mt-1">Aguarde um momento</p>
+  </div>
+</div>
+
+<!-- Conteúdo principal, só aparece quando loading = false -->
+<div *ngIf="!initialLoading" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50">
+  <div class="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white transform hover:scale-[1.02] transition-all duration-300 border border-pink-100 overflow-visible flex flex-col justify-between"> <!-- Removido min-h, adicionado flex justify-between -->
+    <!-- Header com ícone -->
+    <div class="text-center mb-8 border-b border-pink-100 pb-6">
+      <div class="mx-auto w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">VEA - Login</h2>
+      <p class="text-sm text-gray-500 mt-1">Acesse sua conta para continuar</p>
+    </div>
+    <div class="flex flex-col flex-1 justify-center space-y-6"> <!-- Wrapper pro form com flex-1 e justify-center pra centralizar verticalmente se curto -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+        <!-- Campo de E-mail -->
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-2">E-mail *</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+              </svg>
+            </div>
+            <input
+              id="email"
+              formControlName="email"
+              type="email"
+              class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+              [class.border-red-300]="submitted && loginForm.get('email')?.errors"
+              [class.focus:ring-red-500]="submitted && loginForm.get('email')?.errors"
+              aria-describedby="email-error"
+              placeholder="Digite seu e-mail"
+            />
+          </div>
+          <div class="mt-1" id="email-error">
+            <p class="text-sm text-red-600" *ngIf="submitted && loginForm.get('email')?.errors?.['required']">E-mail é obrigatório.</p>
+            <p class="text-sm text-red-600" *ngIf="submitted && loginForm.get('email')?.errors?.['email']">E-mail inválido. Verifique o formato.</p>
+          </div>
+        </div>
+        <!-- Campo de Senha -->
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Senha *</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <input
+              id="password"
+              formControlName="password"
+              [type]="showPassword ? 'text' : 'password'"
+              class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+              [class.border-red-300]="submitted && loginForm.get('password')?.errors"
+              [class.focus:ring-red-500]="submitted && loginForm.get('password')?.errors"
+              aria-describedby="password-error"
+              placeholder="Digite sua senha"
+            />
+            <button
+              type="button"
+              (click)="togglePassword()"
+              class="absolute inset-y-0 right-0 pr-3 flex items-center"
+              [attr.aria-label]="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
+            >
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path *ngIf="!showPassword" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path *ngIf="showPassword" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+              </svg>
+            </button>
+          </div>
+          <div class="mt-1" id="password-error">
+            <p class="text-sm text-red-600" *ngIf="submitted && loginForm.get('password')?.errors?.['required']">Senha é obrigatória.</p>
+            <p class="text-sm text-red-600" *ngIf="submitted && loginForm.get('password')?.errors?.['minlength']">Senha deve ter pelo menos 8 caracteres.</p>
+          </div>
+        </div>
+        <!-- Mensagem de Erro Geral -->
+        <div *ngIf="error" class="bg-red-50 border border-red-200 rounded-xl p-3">
+          <p class="text-sm text-red-800">{{ error }}</p>
+        </div>
+        <!-- Botão de Submit -->
+        <button type="submit" [disabled]="loginForm.invalid || loading" class="w-full py-3 px-4 rounded-xl bg-pink-500 text-white font-medium hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+          <span *ngIf="!loading">Entrar</span>
+          <ng-container *ngIf="loading">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <span>Entrando...</span>
+          </ng-container>
+        </button>
       </form>
-      <p class="text-center mt-3"><a routerLink="/register">Cadastrar-se</a></p>
-    </mat-card-content>
-  </mat-card>
+    </div>
+    <!-- Link para Cadastro (agora empurrado pro fundo pelo justify-between) -->
+    <p class="text-center mt-6 text-sm text-gray-600">
+      Não tem uma conta?
+      <a routerLink="/register" class="font-medium text-pink-500 hover:text-pink-600 transition-colors"> Cadastre-se aqui</a>
+    </p>
+  </div>
 </div>

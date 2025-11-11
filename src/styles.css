@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: var(--background);
+  font-family: 'Roboto', sans-serif;
+}
+
+.error-message {
+  color: red;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 1rem;
+}

@@ -1,0 +1,39 @@
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50 animate-fade-in">
+  <div class="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white transform hover:scale-[1.02] transition-all duration-300 border border-gray-100">
+    <!-- Header com ícone -->
+    <div class="text-center mb-8">
+      <div class="mx-auto w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center mb-4">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">Verificação de E-mail</h2>
+      <p class="text-sm text-gray-600 mt-1">{{ message }}</p>
+    </div>
+
+    <!-- Mensagem de resend (sucesso/erro) -->
+    <div *ngIf="resendMessage" class="mb-4 p-3 rounded-xl" [class.bg-green-50]="!resendMessage.includes('Erro')" [class.bg-red-50]="resendMessage.includes('Erro')">
+      <p class="text-sm" [class.text-green-800]="!resendMessage.includes('Erro')" [class.text-red-800]="resendMessage.includes('Erro')">
+        {{ resendMessage }}
+      </p>
+    </div>
+
+    <!-- Botões -->
+    <div class="space-y-4">
+      <button
+        (click)="goToLogin()"
+        class="w-full py-3 px-4 rounded-xl bg-pink-500 text-white font-medium hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-2"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+        </svg>
+        Ir para Login
+      </button>
+
+    </div>
+    <!-- Link de volta -->
+    <p class="text-center mt-6 text-sm text-gray-600">
+      Já ativou? <a routerLink="/login" class="font-medium text-pink-500 hover:text-pink-600 transition-colors">Entrar aqui</a>
+    </p>
+  </div>
+</div>

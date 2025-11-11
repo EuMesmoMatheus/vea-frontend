@@ -1,0 +1,17 @@
+/* Tailwind Force + Anti-Clip */
+.text-white { color: white !important; }
+.bg-pink-500 { background-color: #ec4899 !important; }
+.hover\:bg-pink-600:hover { background-color: #db2777 !important; }
+.min-h-\[700px\] { min-height: 700px !important; }
+.overflow-visible { overflow: visible !important; }
+.flex-col { display: flex; flex-direction: column; }
+.h-full { height: 100%; }
+.mt-auto { margin-top: auto; }
+.space-y-6 > * + * { margin-top: 1.5rem; }
+
+/* Animation Fade-In */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-in { animation: fadeIn 0.5s ease-out; }
+
+/* SVG Lock Fix */
+svg text-white { stroke: white !important; color: white !important; }

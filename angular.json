@@ -10,7 +10,7 @@
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
-          "style": "scss"
+          "style": "css" 
         },
         "@schematics/angular:application": {
           "strict": true
@@ -31,13 +31,15 @@
               "zone.js"
             ],
             "tsConfig": "tsconfig.app.json",
-            "inlineStyleLanguage": "scss",
+            "inlineStyleLanguage": "css",
             "assets": [
               "src/favicon.ico",
               "src/assets"
             ],
             "styles": [
-              "src/scss/styles.scss"
+              {
+                "input": "src/styles.css"
+              }
             ],
             "scripts": [],
             "allowedCommonJsDependencies": []
@@ -94,13 +96,13 @@
             ],
             "tsConfig": "tsconfig.spec.json",
             "karmaConfig": "karma.conf.js",
-            "inlineStyleLanguage": "scss",
+            "inlineStyleLanguage": "css", 
             "assets": [
               "src/favicon.ico",
               "src/assets"
             ],
             "styles": [
-              "src/scss/styles.scss"
+              "src/styles.css" 
             ],
             "scripts": []
           }

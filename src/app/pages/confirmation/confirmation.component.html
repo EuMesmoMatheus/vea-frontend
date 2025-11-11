@@ -1,0 +1,69 @@
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50 animate-fade-in">
+  <div class="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white transform hover:scale-[1.02] transition-all duration-300 border border-gray-100">
+    <!-- Header com ícone (adaptado do verify-email) -->
+    <div class="text-center mb-8">
+      <div class="mx-auto w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center mb-4">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">VEA - Confirmação de Conta</h2>
+      <p class="text-sm text-gray-600 mt-1">Ativando sua conta...</p>
+    </div>
+
+    <!-- Loading Spinner (adaptado do verify-email) -->
+    @if (loading) {
+      <div class="text-center mb-6">
+        <div class="animate-spin -ml-1 mr-3 h-8 w-8 border-2 border-pink-500 border-t-transparent rounded-full inline-block mb-4"></div>
+        <p class="text-sm text-gray-600">Processando confirmação. Aguarde...</p>
+      </div>
+    }
+
+    <!-- Success (breve, antes do redirecionamento) -->
+    @if (success) {
+      <div class="mb-6 p-4 rounded-xl bg-green-50 border border-green-200">
+        <p class="text-sm text-green-800 text-center">
+          {{ message }}
+        </p>
+      </div>
+    }
+
+    <!-- Error (se falhar) -->
+    @if (error) {
+      <div class="mb-6 p-4 rounded-xl bg-red-50 border border-red-200">
+        <p class="text-sm text-red-800 text-center">
+          {{ error }}
+        </p>
+        <button
+          (click)="retryConfirmation()"
+          class="w-full py-3 px-4 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-2 mt-4"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Tentar Novamente
+        </button>
+      </div>
+    }
+
+    <!-- Botão de fallback (se success sem redirecionamento) -->
+    @if (success && !loading) {
+      <div class="space-y-4">
+        <button
+          (click)="goToLogin()"
+          class="w-full py-3 px-4 rounded-xl bg-pink-500 text-white font-medium hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-2"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+          </svg>
+          Ir para Login
+        </button>
+      </div>
+    }
+
+    <!-- Link de volta (adaptado do verify-email) -->
+    <p class="text-center mt-6 text-sm text-gray-600">
+      Problema? <a routerLink="/verify-email" class="font-medium text-pink-500 hover:text-pink-600 transition-colors">Reenviar Email</a>
+    </p>
+  </div>
+</div>

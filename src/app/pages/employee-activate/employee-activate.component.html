@@ -1,0 +1,172 @@
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50">
+  <div class="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white transform hover:scale-[1.02] transition-all duration-300 border border-gray-100">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="mx-auto w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center mb-4">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">Ativar Conta - VEA</h2>
+      <p class="text-sm text-gray-500 mt-1">Defina sua senha para finalizar o cadastro</p>
+    </div>
+
+    <!-- Loading inicial (carregando dados) -->
+    <div *ngIf="loading && !employeeData" class="text-center py-8">
+      <div class="relative mx-auto w-16 h-16 mb-4">
+        <div class="absolute inset-0 rounded-full border-4 border-pink-100"></div>
+        <div class="absolute inset-0 rounded-full border-4 border-pink-500 border-t-transparent animate-spin"></div>
+      </div>
+      <p class="text-gray-500">Carregando dados...</p>
+    </div>
+
+    <!-- Form (aparece só se dados ok) -->
+    <form *ngIf="employeeData" [formGroup]="activateForm" (ngSubmit)="onSubmit()" class="space-y-6">
+      <!-- Nome (readonly) -->
+      <div>
+        <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
+        <input id="name" formControlName="name" type="text" class="w-full px-3 py-3 border border-gray-300 rounded-xl bg-gray-50 cursor-not-allowed" readonly />
+      </div>
+
+      <!-- E-mail (readonly) -->
+      <div>
+        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+            </svg>
+          </div>
+          <input id="email" formControlName="email" type="email" class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl bg-gray-50 cursor-not-allowed" readonly />
+        </div>
+      </div>
+
+      <!-- Senha -->
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Senha *</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <input
+            id="password"
+            formControlName="password"
+            [type]="showPassword ? 'text' : 'password'"
+            class="w-full pl-10 pr-10 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+            [class.border-red-300]="activateForm.get('password')?.touched && activateForm.get('password')?.errors?.['passwordWeak']"
+            [class.border-green-500]="passwordProgress === 100 && !activateForm.get('password')?.errors"
+            [class.border-gray-300]="!(activateForm.get('password')?.touched && activateForm.get('password')?.errors?.['passwordWeak']) && passwordProgress !== 100"
+            placeholder="Digite uma senha segura"
+          />
+          <button type="button" (click)="togglePassword('password')" class="absolute inset-y-0 right-0 pr-3 flex items-center" [attr.aria-label]="showPassword ? 'Ocultar senha' : 'Mostrar senha'">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path *ngIf="!showPassword" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path *ngIf="showPassword" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+            </svg>
+          </button>
+        </div>
+        <!-- Barra de Progresso -->
+        <div class="mt-2">
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="h-2 rounded-full transition-all duration-300" [class]="passwordStrengthColor" [style.width.%]="passwordProgress"></div>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">
+            Força da senha: <span [class]="passwordStrengthColor === 'bg-green-500' ? 'text-green-600' : passwordStrengthColor === 'bg-yellow-500' ? 'text-yellow-600' : 'text-red-600'">
+              {{ passwordProgress < 50 ? 'Fraca' : passwordProgress < 80 ? 'Média' : 'Forte' }}
+            </span>
+          </p>
+        </div>
+        <!-- Critérios -->
+        <ul class="mt-2 space-y-1 text-xs">
+          <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2 flex-shrink-0" [class.text-green-500]="passwordCriteria.length" [class.text-red-500]="!passwordCriteria.length && activateForm.get('password')?.touched && activateForm.get('password')?.value" fill="none" viewBox="0 0 24 24">
+              <path *ngIf="passwordCriteria.length" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              <path *ngIf="!passwordCriteria.length && activateForm.get('password')?.touched && activateForm.get('password')?.value" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Mínimo 8 caracteres
+          </li>
+          <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2 flex-shrink-0" [class.text-green-500]="passwordCriteria.upper" [class.text-red-500]="!passwordCriteria.upper && activateForm.get('password')?.touched && activateForm.get('password')?.value" fill="none" viewBox="0 0 24 24">
+              <path *ngIf="passwordCriteria.upper" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              <path *ngIf="!passwordCriteria.upper && activateForm.get('password')?.touched && activateForm.get('password')?.value" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            1 maiúscula (A-Z)
+          </li>
+          <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2 flex-shrink-0" [class.text-green-500]="passwordCriteria.lower" [class.text-red-500]="!passwordCriteria.lower && activateForm.get('password')?.touched && activateForm.get('password')?.value" fill="none" viewBox="0 0 24 24">
+              <path *ngIf="passwordCriteria.lower" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              <path *ngIf="!passwordCriteria.lower && activateForm.get('password')?.touched && activateForm.get('password')?.value" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            1 minúscula (a-z)
+          </li>
+          <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2 flex-shrink-0" [class.text-green-500]="passwordCriteria.number" [class.text-red-500]="!passwordCriteria.number && activateForm.get('password')?.touched && activateForm.get('password')?.value" fill="none" viewBox="0 0 24 24">
+              <path *ngIf="passwordCriteria.number" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              <path *ngIf="!passwordCriteria.number && activateForm.get('password')?.touched && activateForm.get('password')?.value" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            1 número (0-9)
+          </li>
+          <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2 flex-shrink-0" [class.text-green-500]="passwordCriteria.special" [class.text-red-500]="!passwordCriteria.special && activateForm.get('password')?.touched && activateForm.get('password')?.value" fill="none" viewBox="0 0 24 24">
+              <path *ngIf="passwordCriteria.special" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              <path *ngIf="!passwordCriteria.special && activateForm.get('password')?.touched && activateForm.get('password')?.value" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            1 caractere especial (!@#$%)
+          </li>
+        </ul>
+        <p class="text-sm text-red-600 mt-1" *ngIf="activateForm.get('password')?.touched && activateForm.get('password')?.errors?.['required']">Senha é obrigatória.</p>
+        <p class="text-sm text-red-600 mt-1" *ngIf="passwordErrors">{{ passwordErrors }}</p>
+      </div>
+
+      <!-- Confirma Senha -->
+      <div>
+        <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">Confirmar Senha *</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <input
+            id="confirmPassword"
+            formControlName="confirmPassword"
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            class="w-full pl-10 pr-10 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+            [class.border-red-300]="submitted && activateForm.get('confirmPassword')?.errors"
+            placeholder="Confirme sua senha"
+          />
+          <button type="button" (click)="togglePassword('confirmPassword')" class="absolute inset-y-0 right-0 pr-3 flex items-center" [attr.aria-label]="showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path *ngIf="!showConfirmPassword" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path *ngIf="showConfirmPassword" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+            </svg>
+          </button>
+        </div>
+        <p class="text-sm text-red-600 mt-1" *ngIf="submitted && activateForm.get('confirmPassword')?.errors?.['required']">Confirmação é obrigatória.</p>
+        <p class="text-sm text-red-600 mt-1" *ngIf="confirmPasswordErrors">{{ confirmPasswordErrors }}</p>
+      </div>
+
+      <!-- Erro Geral -->
+      <div *ngIf="error" class="bg-red-50 border border-red-200 rounded-xl p-3">
+        <p class="text-sm text-red-800">{{ error }}</p>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" [disabled]="activateForm.invalid || loading" class="w-full py-3 px-4 rounded-xl bg-pink-500 text-white font-medium hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+        <span *ngIf="!loading">Ativar Conta</span>
+        <svg *ngIf="loading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+        <span *ngIf="loading">Ativando...</span>
+      </button>
+    </form>
+
+    <!-- Link pro login se erro -->
+    <div *ngIf="error || !employeeData" class="text-center mt-6 pt-4 border-t border-gray-100">
+      <p class="text-sm text-gray-600">Problemas com o link? <a routerLink="/login" class="font-medium text-pink-500 hover:text-pink-600">Ir para Login</a></p>
+    </div>
+  </div>
+</div>

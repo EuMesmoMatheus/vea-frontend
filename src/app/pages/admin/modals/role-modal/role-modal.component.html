@@ -1,0 +1,22 @@
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-8 w-full max-w-md mx-4 animate-fade-in">
+    <h3 class="text-xl font-semibold mb-6">{{ editingId ? 'Editar' : 'Adicionar' }} Cargo</h3>
+    <form [formGroup]="roleForm" (ngSubmit)="onSubmit()" class="space-y-5">
+      <div>
+        <label for="roleName" class="block text-sm font-medium text-gray-700 mb-2">Nome do Cargo *</label>
+        <input id="roleName" formControlName="name" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500" [class.border-red-300]="submittedRole && roleForm.get('name')?.invalid">
+        <small *ngIf="submittedRole && roleForm.get('name')?.errors?.['required']" class="text-red-500 text-xs">Nome obrigatório</small>
+      </div>
+      <div>
+        <label class="flex items-center text-sm font-medium text-gray-700 mb-2">
+          <input type="checkbox" formControlName="active" class="mr-2 rounded">
+          Ativo
+        </label>
+      </div>
+      <div class="flex justify-end space-x-4 pt-6">
+        <button type="button" (click)="close.emit()" class="px-6 py-2 text-gray-600 rounded-xl hover:bg-gray-100 transition-all duration-300">Cancelar</button>
+        <button type="submit" [disabled]="roleForm.invalid" class="px-6 py-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition-all duration-300 disabled:opacity-50">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
