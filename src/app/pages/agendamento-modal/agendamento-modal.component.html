@@ -1,98 +1,111 @@
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+
     <!-- Header -->
-    <div class="p-6 border-b border-gray-200">
-      <h2 class="text-2xl font-bold text-gray-900 mb-2">Agendar Serviço</h2>
-      <p class="text-gray-600">Selecione os detalhes passo a passo</p>
+    <div class="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-4 text-center">
+      <h2 class="text-xl font-bold">Agendar Horário</h2>
     </div>
-    <!-- Progresso Stepper -->
-    <form [formGroup]="form">
-      <div class="p-6 space-y-4">
-        <!-- Step 1: Serviço -->
-        <div *ngIf="currentStep === 0" class="space-y-4">
-          <div *ngIf="loading; else serviceContent" class="flex justify-center py-4">
-            <svg class="animate-spin h-8 w-8 text-pink-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          </div>
-          <ng-template #serviceContent>
-            <div class="space-y-3">
-              <label class="block text-sm font-medium text-gray-700">Selecione o Serviço</label>
-              <select formControlName="serviceId" (change)="onServiceChange($any($event.target)?.value)" class="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all">
-                <option value="">Escolha um serviço</option>
-                <option *ngFor="let s of services" [value]="s.id">
-                  {{ s.name }} ({{ s.duration }} min{{ s.price ? ' - R$ ' + s.price : '' }})
-                </option>
-              </select>
-              <p *ngIf="form.get('serviceId')?.hasError('required') && form.get('serviceId')?.touched" class="text-sm text-red-500">Serviço obrigatório</p>
+
+    <!-- Progresso -->
+    <div class="flex justify-center gap-3 py-3 bg-gray-50 text-xs">
+      <span [class]="currentStep === 1 ? 'text-pink-600 font-bold' : 'text-gray-400'">1. Serviços</span>
+      <span class="text-gray-400">→</span>
+      <span [class]="currentStep === 2 ? 'text-pink-600 font-bold' : 'text-gray-400'">2. Profissional</span>
+      <span class="text-gray-400">→</span>
+      <span [class]="currentStep === 3 ? 'text-pink-600 font-bold' : 'text-gray-400'">3. Horário</span>
+      <span class="text-gray-400">→</span>
+      <span [class]="currentStep === 4 ? 'text-pink-600 font-bold' : 'text-gray-400'">Confirmar</span>
+    </div>
+
+    <!-- Conteúdo -->
+    <div class="flex-1 overflow-y-auto px-6 py-4">
+
+      <!-- PASSO 1: SERVIÇOS -->
+      <div *ngIf="currentStep === 1" class="space-y-3">
+        <h3 class="font-bold text-lg text-center mb-4">Escolha os serviços</h3>
+        <label *ngFor="let s of services" class="block cursor-pointer">
+          <input type="checkbox" class="hidden" [checked]="isServiceSelected(s)" (change)="toggleService(s)">
+          <div class="flex items-center justify-between p-4 rounded-xl border-2 transition-all
+                      {{isServiceSelected(s) ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-gray-200 hover:border-pink-300'}}">
+            <div>
+              <div class="font-medium">{{ s.name }}</div>
+              <div class="text-sm text-gray-600">{{ s.duration }} min • R$ {{ s.price | number:'1.2-2' }}</div>
             </div>
-          </ng-template>
-          <!-- <<< AJUSTADO: Usa isStepValid(0) para disabled -->
-          <button (click)="nextStep()" [disabled]="loading || !isStepValid(0)" class="w-full py-2 px-4 rounded-xl bg-pink-500 text-white font-semibold hover:bg-pink-600 transition-colors disabled:opacity-50">Próximo</button>
+            <i *ngIf="isServiceSelected(s)" class="bi bi-check-circle-fill text-2xl text-pink-600"></i>
+            <i *ngIf="!isServiceSelected(s)" class="bi bi-circle text-2xl text-gray-300"></i>
+          </div>
+        </label>
+      </div>
+
+      <!-- PASSO 2: PROFISSIONAIS — FOTOS CARREGAM 100% -->
+      <div *ngIf="currentStep === 2">
+        <h3 class="font-bold text-lg text-center mb-4">Com quem você quer?</h3>
+        <div class="grid grid-cols-4 gap-4">
+          <button *ngFor="let e of employees" (click)="selectEmployee(e)" class="text-center">
+            <img [src]="getEmployeePhoto(e)" 
+                 class="w-16 h-16 rounded-full object-cover mx-auto border-4 transition-all
+                        {{selectedEmployee?.id === e.id ? 'border-pink-600 ring-4 ring-pink-300' : 'border-gray-300'}}"
+                 alt="{{ e.name }}">
+            <p class="text-xs mt-2 font-medium">{{ e.name.split(' ')[0] }}</p>
+          </button>
         </div>
-        <!-- Step 2: Funcionário -->
-        <div *ngIf="currentStep === 1" class="space-y-4">
-          <div class="space-y-3">
-            <label class="block text-sm font-medium text-gray-700">Selecione o Profissional</label>
-            <select formControlName="employeeId" (change)="onEmployeeOrDateChange()" class="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all">
-              <option value="">Escolha um profissional</option>
-              <option *ngFor="let emp of employees" [value]="emp.id">{{ emp.name }} - {{ emp.roleName || emp.cargo }}</option>
-            </select>
-            <p *ngIf="form.get('employeeId')?.hasError('required') && form.get('employeeId')?.touched" class="text-sm text-red-500">Funcionário obrigatório</p>
-          </div>
-          <!-- <<< AJUSTADO: Usa isStepValid(1) para disabled -->
-          <div class="flex space-x-2">
-            <button (click)="prevStep()" [disabled]="loading" class="flex-1 py-2 px-4 rounded-xl bg-gray-300 text-gray-700 font-semibold hover:bg-gray-400 transition-colors disabled:opacity-50">Voltar</button>
-            <button (click)="nextStep()" [disabled]="loading || !isStepValid(1)" class="flex-1 py-2 px-4 rounded-xl bg-pink-500 text-white font-semibold hover:bg-pink-600 transition-colors disabled:opacity-50">Próximo</button>
-          </div>
-        </div>
-        <!-- Step 3: Data e Horário -->
-        <div *ngIf="currentStep === 2" class="space-y-4">
-          <div class="space-y-3">
-            <label class="block text-sm font-medium text-gray-700">Data</label>
-            <input type="date" formControlName="date" (change)="onEmployeeOrDateChange()" [min]="minDate" class="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all">
-            <p *ngIf="form.get('date')?.hasError('required') && form.get('date')?.touched" class="text-sm text-red-500">Data obrigatória (a partir de hoje)</p>
-          </div>
-          <div class="space-y-3">
-            <label class="block text-sm font-medium text-gray-700">Horário Disponível ({{ selectedEmployeeName }})</label>  <!-- <<< FIX: Mostra employee no label -->
-            <select formControlName="timeSlot" class="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all">
-              <option value="">Escolha um horário</option>
-              <!-- <<< FIX: Trate como string[], sem .time ou .employeeName -->
-              <option *ngFor="let slot of availableSlots" [value]="slot">{{ slot }}</option>
-            </select>
-            <p *ngIf="form.get('timeSlot')?.hasError('required') && form.get('timeSlot')?.touched" class="text-sm text-red-500">Horário obrigatório</p>
-            <p *ngIf="availableSlots.length === 0 && !loading" class="text-sm text-red-500">Sem horários disponíveis. Tente outra data ou profissional.</p>
-          </div>
-          <!-- <<< AJUSTADO: Usa isStepValid(2) para disabled (inclui form.valid e slots) -->
-          <div class="flex space-x-2">
-            <button (click)="prevStep()" [disabled]="loading" class="flex-1 py-2 px-4 rounded-xl bg-gray-300 text-gray-700 font-semibold hover:bg-gray-400 transition-colors disabled:opacity-50">Voltar</button>
-            <button (click)="nextStep()" [disabled]="loading || !isStepValid(2)" class="flex-1 py-2 px-4 rounded-xl bg-pink-500 text-white font-semibold hover:bg-pink-600 transition-colors disabled:opacity-50">Confirmar</button>
-          </div>
-        </div>
-        <!-- Step 4: Confirmação -->
-        <div *ngIf="currentStep === 3" class="space-y-4">
-          <div class="p-4 bg-gray-50 rounded-xl space-y-2">
-            <h3 class="font-semibold text-gray-900">Resumo do Agendamento</h3>
-            <p><strong>Serviço:</strong> {{ selectedService?.name }} ({{ selectedService?.duration }} min)</p>
-            <p><strong>Profissional:</strong> {{ selectedEmployeeName }}</p>
-            <p><strong>Data:</strong> {{ form.value.date | date:'dd/MM/yyyy' }}</p>
-            <p><strong>Horário:</strong> {{ form.value.timeSlot }}</p>
-            <p><strong>Total:</strong> R$ {{ selectedService?.price || 0 }} (opcional)</p>
-          </div>
-          <div class="flex space-x-2">
-            <button (click)="prevStep()" [disabled]="loading" class="flex-1 py-2 px-4 rounded-xl bg-gray-300 text-gray-700 font-semibold hover:bg-gray-400 transition-colors disabled:opacity-50">Voltar</button>
-            <button (click)="confirm()" [disabled]="loading" class="flex-1 py-2 px-4 rounded-xl bg-pink-500 text-white font-semibold hover:bg-pink-600 transition-colors disabled:opacity-50">
-              <span *ngIf="loading">Agendando...</span>
-              <span *ngIf="!loading">Agendar</span>
+      </div>
+
+      <!-- PASSO 3: DATA E HORÁRIO -->
+      <div *ngIf="currentStep === 3" class="space-y-5">
+        <h3 class="font-bold text-lg text-center mb-4">Quando você pode?</h3>
+        <input type="date" [(ngModel)]="selectedDate" [min]="minDate" (change)="loadAvailableSlots()"
+               class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-pink-500 text-center">
+        
+        <div *ngIf="selectedDate" class="text-center">
+          <p class="text-sm text-gray-600 mb-3">Horários com <strong>{{ professionalFirstName }}</strong></p>
+          <div class="grid grid-cols-4 gap-3">
+            <button *ngFor="let slot of availableSlots" (click)="selectTimeSlot(slot)"
+                    class="py-3 rounded-lg text-sm font-medium transition-all
+                           {{selectedTimeSlot === slot ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md' : 'bg-gray-100 hover:bg-gray-200'}}">
+              {{ slot }}
             </button>
+          </div>
+          <div *ngIf="loadingSlots" class="py-4">
+            <i class="bi bi-hourglass-split text-2xl text-pink-600 animate-spin"></i>
+          </div>
+          <div *ngIf="!loadingSlots && availableSlots.length === 0" class="py-6 text-gray-500">
+            <p>Nenhum horário disponível nessa data</p>
           </div>
         </div>
       </div>
-    </form>
-    <!-- Rodapé com Cancelar -->
-    <div class="p-6 border-t border-gray-200 flex justify-end">
-      <button (click)="cancel()" [disabled]="loading" class="px-6 py-2 rounded-xl bg-gray-500 text-white hover:bg-gray-600 transition-colors disabled:opacity-50">Cancelar</button>
+
+      <!-- PASSO 4: RESUMO -->
+      <div *ngIf="currentStep === 4" class="text-center space-y-4">
+        <i class="bi bi-check-circle-fill text-6xl text-green-500"></i>
+        <h3 class="text-2xl font-bold text-pink-700">Tudo certo!</h3>
+        <div class="bg-gray-50 rounded-xl p-5 text-left text-sm space-y-2">
+          <p><strong>Serviços:</strong> {{ selectedServicesNames }}</p>
+          <p><strong>Profissional:</strong> {{ selectedEmployee?.name }}</p>
+          <p><strong>Data:</strong> {{ selectedDate | date:'dd/MM/yyyy' }}</p>
+          <p><strong>Horário:</strong> {{ selectedTimeSlot }}</p>
+          <p class="text-xl font-bold text-pink-600 pt-3">
+            Total: R$ {{ totalPrice | number:'1.2-2' }} ({{ totalDuration }} min)
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botões -->
+    <div class="p-5 border-t flex justify-between gap-3">
+      <button (click)="cancel()" class="px-6 py-3 text-gray-600 font-medium">Cancelar</button>
+      <div class="flex gap-3">
+        <button *ngIf="currentStep > 1" (click)="previousStep()" class="px-6 py-3 bg-gray-200 rounded-lg font-medium">Voltar</button>
+        <button *ngIf="currentStep < 4" (click)="nextStep()"
+                [disabled]="(currentStep===1 && !selectedServices.length) || (currentStep===2 && !selectedEmployee) || (currentStep===3 && !selectedTimeSlot)"
+                class="px-8 py-3 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg font-bold disabled:opacity-50">
+          Continuar
+        </button>
+        <button *ngIf="currentStep === 4" (click)="confirm()" [disabled]="loading"
+                class="px-10 py-3 bg-green-600 text-white rounded-lg font-bold flex items-center gap-2">
+          Confirmar
+        </button>
+      </div>
     </div>
   </div>
 </div>

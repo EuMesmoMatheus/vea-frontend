@@ -1,16 +1,21 @@
-import { ApplicationConfig } from '@angular/core';
+// src/app/app.config.ts
+import { ApplicationConfig, LOCALE_ID } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { routes } from './app-routing.module';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'; // Com interceptor support (opcional)
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 
-// Se criar o authInterceptor (veja abaixo), descomenta: import { authInterceptor } from './interceptors/auth.interceptor';
+import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideAnimations(),
-    provideHttpClient(withInterceptorsFromDi()), // Ativa interceptors (pra token/companyId automático)
-    // authInterceptor // Descomenta se criar o interceptor
+    provideHttpClient(withInterceptorsFromDi()),
+
+    // ESSAS DUAS LINHAS MATAM O ERRO DO DATEPIPE PARA SEMPRE
+    { provide: LOCALE_ID, useValue: 'pt-BR' }
+    // Se quiser forçar o fuso horário também (recomendado no Brasil):
+    // { provide: LOCALE_ID, useValue: 'pt-BR' },
+    // { provide: DEFAULT_CURRENCY_CODE, useValue: 'BRL' }
   ]
 };

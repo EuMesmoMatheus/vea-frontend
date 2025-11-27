@@ -21,7 +21,6 @@
   "dependencies": {
     "@angular/animations": "^20.3.2",
     "@angular/common": "^20.3.2",
-    "@angular/compiler": "^20.3.2",
     "@angular/core": "^20.3.2",
     "@angular/forms": "^20.3.2",
     "@angular/language-service": "^20.3.2",
@@ -55,7 +54,8 @@
   "devDependencies": {
     "@angular/build": "^20.3.3",
     "@angular/cli": "^20.3.3",
-    "@angular/compiler-cli": "^20.3.2",
+    "@angular/compiler": "^20.3.14",
+    "@angular/compiler-cli": "^20.3.14",
     "@types/jasmine": "^5.1.9",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^22.18.0",

@@ -1,13 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { DatePipe } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ApiService, Appointment } from '../../services/api.service';
-import { Router } from '@angular/router'; // <<< NOVO: Import Router para navegação
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-account',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, FormsModule],
   templateUrl: './account.component.html',
   styleUrls: ['./account.component.css']
 })
@@ -17,120 +17,162 @@ export class AccountComponent implements OnInit {
   loading = true;
   error = '';
 
-  constructor(private api: ApiService, private router: Router) {} // <<< NOVO: Inject Router
+  activeTab: 'today' | 'future' | 'past' = 'today';
+  filterDate: string = '';
+  filteredAppointments: Appointment[] = [];
+
+  todayAppointments: Appointment[] = [];
+  futureAppointments: Appointment[] = [];
+  pastAppointments: Appointment[] = [];
+
+  // MODAL: ESSA LINHA É OBRIGATÓRIA!
+  selectedAppointment: Appointment | null = null;
+
+  constructor(private api: ApiService, private router: Router) {}
 
   ngOnInit(): void {
     this.loadUser();
     if (this.user.id) {
       this.loadAppointments();
     } else {
-      console.warn('User sem ID – redirecione pra login se necessário');
       this.loading = false;
     }
   }
 
-  // <<< FIX: Tornou público (removeu 'private') pra acessar do HTML
   loadUser(): void {
     const userData = localStorage.getItem('user');
     if (userData) {
       this.user = JSON.parse(userData);
-      console.log('User carregado na conta:', this.user);  // Debug
     } else {
       this.user = { name: 'Usuário', email: '' };
-      this.error = 'Faça login para ver suas informações.';
+      this.error = 'Faça login para ver seus dados.';
     }
   }
 
-  // <<< UPDATE: Não passa companyId se for 0 (deixa backend filtrar só por clientId)
   public loadAppointments(): void {
     this.loading = true;
     this.error = '';
-    // <<< Só passa companyId se >0 (ex: cliente com empresa fixa); senão, undefined = filtra só por clientId
     const companyId = this.user.companyId && this.user.companyId > 0 ? this.user.companyId : undefined;
+
     this.api.getMyAppointments(companyId).subscribe({
       next: (response) => {
         if (response.success) {
           this.appointments = response.data || [];
-          console.log('Meus agendamentos carregados:', this.appointments.length);
+          this.categorizeAppointments();
         } else {
           this.error = response.message || 'Erro ao carregar agendamentos.';
         }
         this.loading = false;
       },
-      error: (err) => {
-        console.error('Erro load appointments:', err);
-        this.error = 'Falha ao carregar agendamentos. Tente novamente.';
+      error: () => {
+        this.error = 'Falha na conexão.';
         this.loading = false;
       }
     });
   }
 
-  // <<< NOVO: Método público pra recarregar tudo (chama loadUser e loadAppointments)
+  private categorizeAppointments(): void {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    this.todayAppointments = this.appointments.filter(a => {
+      const d = new Date(a.startDateTime);
+      return d >= today && d < tomorrow;
+    });
+    this.futureAppointments = this.appointments.filter(a => new Date(a.startDateTime) >= tomorrow);
+    this.pastAppointments = this.appointments.filter(a => new Date(a.startDateTime) < today);
+
+    this.applyFilter();
+  }
+
+  applyFilter(): void {
+    let list: Appointment[] = [];
+    if (this.activeTab === 'today') list = [...this.todayAppointments];
+    else if (this.activeTab === 'future') list = [...this.futureAppointments];
+    else list = [...this.pastAppointments];
+
+    if (this.filterDate) {
+      const f = new Date(this.filterDate);
+      f.setHours(0, 0, 0, 0);
+      const next = new Date(f);
+      next.setDate(next.getDate() + 1);
+      list = list.filter(a => {
+        const d = new Date(a.startDateTime);
+        return d >= f && d < next;
+      });
+    }
+    this.filteredAppointments = list;
+  }
+
+  clearFilter(): void {
+    this.filterDate = '';
+    this.applyFilter();
+  }
+
   reloadData(): void {
     this.loadUser();
-    if (this.user.id) {
-      this.loadAppointments();
-    }
+    if (this.user.id) this.loadAppointments();
   }
 
-  // <<< NOVO: Navegação para Hub
-  goBackToHub(): void {
-    this.router.navigate(['/hub']); // <<< Ajuste a rota se necessário (ex: '/home' ou '/dashboard')
-  }
+  goBackToHub(): void { this.router.navigate(['/hub']); }
+  goToLogin(): void { this.router.navigate(['/login']); }
 
-  // <<< NOVO: Navegação para Login
-  goToLogin(): void {
-    this.router.navigate(['/login']);
-  }
-
-  // <<< NOVO: Cancelar agendamento (chama API e recarrega lista)
   cancelAppointment(id: number): void {
     if (confirm('Tem certeza que deseja cancelar este agendamento?')) {
       this.api.cancelAppointment(id).subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.loadAppointments(); // Recarrega a lista
-            alert('Agendamento cancelado com sucesso!');
-          }
+        next: () => {
+          this.loadAppointments();
+          this.selectedAppointment = null; // fecha o modal se estiver aberto
+          alert('Cancelado com sucesso!');
         },
-        error: (err) => {
-          console.error('Erro ao cancelar:', err);
-          alert('Falha ao cancelar agendamento. Tente novamente.');
-        }
+        error: () => alert('Erro ao cancelar.')
       });
     }
   }
 
-  // <<< NOVO: Ver detalhes (ex: navega para página de detalhes ou modal - placeholder)
-  viewDetails(id: number): void {
-    // Placeholder: Navega para rota de detalhes ou abre modal
-    console.log('Ver detalhes do agendamento:', id);
-    // Exemplo: this.router.navigate(['/appointment', id]);
-    alert(`Detalhes do agendamento ${id} (implemente modal ou rota aqui)`);
+  // ABRE O MODAL COM OS DETALHES
+  viewDetails(appt: Appointment): void {
+    this.selectedAppointment = appt;
   }
 
-  // <<< FIX: TrackBy method public correto (sem ng-template)
-  trackByAppointmentId(index: number, appt: Appointment): number {
+  trackByAppointmentId(_: number, appt: Appointment): number {
     return appt.id;
   }
 
-  // Helper: Status traduzido
-  getStatusLabel(status: string): string {
-    const labels: Record<string, string> = {
+  // VERIFICA SE JÁ PASSOU DO HORÁRIO
+  isAlreadyDone(appt: Appointment): boolean {
+    const now = new Date();
+    const end = appt.endDateTime
+      ? new Date(appt.endDateTime)
+      : new Date(new Date(appt.startDateTime).getTime() + (appt.totalDurationMinutes || 60) * 60000);
+    return end < now;
+  }
+
+  // LABEL DO STATUS
+  getStatusLabel(appt: Appointment): string {
+    if (this.isAlreadyDone(appt) && (appt.status === 'Scheduled' || appt.status === 'Confirmed')) {
+      return 'Realizado';
+    }
+    const map: Record<string, string> = {
       'Scheduled': 'Agendado',
       'Confirmed': 'Confirmado',
       'Cancelled': 'Cancelado'
     };
-    return labels[status] || status;
+    return map[appt.status] || appt.status;
   }
 
-  // Helper: Badge cor por status
-  getStatusClass(status: string): string {
-    const classes: Record<string, string> = {
+  // CLASSE DO STATUS
+  getStatusClass(appt: Appointment): string {
+    if (this.isAlreadyDone(appt) && (appt.status === 'Scheduled' || appt.status === 'Confirmed')) {
+      return 'bg-slate-600 text-white';
+    }
+    const map: Record<string, string> = {
       'Scheduled': 'bg-yellow-100 text-yellow-800',
       'Confirmed': 'bg-green-100 text-green-800',
       'Cancelled': 'bg-red-100 text-red-800'
     };
-    return classes[status] || 'bg-gray-100 text-gray-800';
+    return map[appt.status] || 'bg-gray-100 text-gray-800';
   }
 }
