@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # Obrigatório pro SonarCloud calcular "New Code" corretamente
+          fetch-depth: 0  # Obrigatório pro SonarCloud calcular "New Code" corretamente
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,13 +27,13 @@ jobs:
 
       - name: Run tests with coverage
         run: npm run test -- --coverage --watch=false --browsers=ChromeHeadless
-        continue-on-error: true   # deixa o Sonar rodar mesmo se algum teste quebrar
+        continue-on-error: true  # deixa o Sonar rodar mesmo se algum teste quebrar
 
       - name: Build project (pra garantir que o AOT rode e o Sonar veja tudo)
         run: npm run build -- --configuration production
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github1½-action@master
+        uses: SonarSource/sonarqube-scan-action@v6  # Atualizado: action correta e versão latest (v6)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # obrigatório pro decoration de PR
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
