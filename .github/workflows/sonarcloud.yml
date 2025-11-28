@@ -11,26 +11,38 @@ jobs:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Importantíssimo pro Sonar calcular new code
+          fetch-depth: 0   # Obrigatório pro SonarCloud calcular "New Code" corretamente
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies (Angular 20 fix)
+        run: npm ci --legacy-peer-deps
 
-      - name: Run tests with coverage (se tiver testes)
-        run: npm run test -- --coverage --coverageReporters=lcov
-        continue-on-error: true  # roda o Sonar mesmo se os testes falharem
+      - name: Run tests with coverage
+        run: npm run test -- --coverage --watch=false --browsers=ChromeHeadless
+        continue-on-error: true   # deixa o Sonar rodar mesmo se algum teste quebrar
+
+      - name: Build project (pra garantir que o AOT rode e o Sonar veja tudo)
+        run: npm run build -- --configuration production
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarcloud-github1½-action@master
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}git add .
-
-#bla
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # obrigatório pro decoration de PR
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=EuMesmoMatheus_vea-frontend
+            -Dsonar.organization=eumesmomatheus
+            -Dsonar.sources=src
+            -Dsonar.tests=src
+            -Dsonar.test.inclusions=**/*.spec.ts
+            -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.sourceEncoding=UTF-8
