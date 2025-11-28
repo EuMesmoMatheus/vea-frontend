@@ -45,3 +45,4 @@ jobs:
             -Dsonar.sources=src
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.typescript.tslint.reportPaths=
+      # test
