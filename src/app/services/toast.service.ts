@@ -23,5 +23,5 @@ export class ToastService {
 
   hide(): void {
     this.toastSubject.next(null);
-  }
+  } //bla
 }
