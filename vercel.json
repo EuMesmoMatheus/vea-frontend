@@ -1,6 +1,10 @@
-
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/coreui-free-angular-admin-template/browser",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
