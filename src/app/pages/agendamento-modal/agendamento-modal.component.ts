@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Service, Employee, AgendaEvent } from '../../services/api.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-agendamento-modal',
@@ -28,8 +29,8 @@ export class AgendamentoModalComponent implements OnChanges {
   currentStep = 1;
   minDate = new Date().toISOString().split('T')[0];
 
-  // URL DO BACKEND (AJUSTE SE FOR DIFERENTE)
-  private readonly apiBaseUrl = 'http://localhost:63562';
+  // URL DO BACKEND - usa environment
+  private readonly apiBaseUrl = environment.apiUrl;
 
   constructor(private api: ApiService) {}
 
@@ -59,7 +60,8 @@ export class AgendamentoModalComponent implements OnChanges {
 
   loadEmployees() {
     this.api.getEmployeesByService(this.companyId, 0).subscribe(employees => {
-      this.employees = employees;
+      // Filtra apenas funcionários com email verificado (ativos de verdade)
+      this.employees = employees.filter(emp => emp.emailVerified === true);
     });
   }
 
