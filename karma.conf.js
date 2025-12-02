@@ -9,30 +9,42 @@ module.exports = function(config) {
       require('karma-jasmine'),
       require('karma-chrome-launcher'),
       require('karma-jasmine-html-reporter'),
-      require('karma-coverage'),
-      
+      require('karma-coverage')
     ],
     client: {
       jasmine: {
-        // you can add configuration options for Jasmine here
-        // the possible options are listed at https://jasmine.github.io/api/edge/Configuration.html
-        // for example, you can disable the random execution with `random: false`
-        // or set a specific seed with `seed: 4321`
+        // Configurações Jasmine
+        random: false, // Desabilita execução randômica para reproduzibilidade
+        failSpecWithNoExpectations: true // Falha specs sem expectations
       },
-      clearContext: false // leave Jasmine Spec Runner output visible in browser
+      clearContext: false // Mantém resultado do Jasmine Spec Runner visível
     },
     jasmineHtmlReporter: {
-      suppressAll: true // removes the duplicated traces
+      suppressAll: true // Remove traces duplicados
     },
+    // ============================================
+    // Configuração de Cobertura para SonarCloud
+    // ============================================
     coverageReporter: {
-      dir: require('path').join(__dirname, './coverage/coreui-free-angular-admin-template'),
+      dir: require('path').join(__dirname, './coverage'),
       subdir: '.',
       reporters: [
-        { type: 'html' },
-        { type: 'text-summary' }
-      ]
+        { type: 'html' },           // Relatório HTML para visualização
+        { type: 'text-summary' },   // Resumo no console
+        { type: 'lcovonly' },       // LCOV para SonarCloud
+        { type: 'cobertura' }       // Cobertura XML (alternativa)
+      ],
+      check: {
+        // Thresholds de cobertura mínima (relaxados para CI)
+        global: {
+          statements: 30,
+          branches: 25,
+          functions: 30,
+          lines: 30
+        }
+      }
     },
-    reporters: ['progress', 'kjhtml'],
+    reporters: ['progress', 'kjhtml', 'coverage'],
     port: 9876,
     colors: true,
     logLevel: config.LOG_INFO,
@@ -42,9 +54,23 @@ module.exports = function(config) {
       Chrome_Custom: {
         base: 'Chrome',
         flags: ['--disable-search-engine-choice-screen']
+      },
+      ChromeHeadlessCI: {
+        base: 'ChromeHeadless',
+        flags: [
+          '--no-sandbox',
+          '--disable-gpu',
+          '--disable-translate',
+          '--disable-extensions',
+          '--disable-dev-shm-usage'
+        ]
       }
     },
     singleRun: false,
-    restartOnFileChange: true
+    restartOnFileChange: true,
+    // Timeout para CI
+    browserDisconnectTimeout: 10000,
+    browserDisconnectTolerance: 3,
+    browserNoActivityTimeout: 60000
   });
 };

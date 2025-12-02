@@ -1,55 +1,33 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { RegisterComponent } from './register.component';
-import { AuthService } from '@app/auth/auth.service';
+import { ApiService } from '../../services/api.service';
 import { Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
-import { ReactiveFormsModule } from '@angular/forms';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
-import { By } from '@angular/platform-browser';
-import { DebugElement } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('RegisterComponent', () => {
   let component: RegisterComponent;
   let fixture: ComponentFixture<RegisterComponent>;
-  let authService: jest.Mocked<AuthService>;
-  let router: Router;
-  let toastr: jest.Mocked<ToastrService>;
-  let el: DebugElement;
-
-  const mockAuthService = {
-    registerCompany: jest.fn()
-  };
-
-  const mockToastr = {
-    success: jest.fn(),
-    error: jest.fn()
-  };
+  let apiServiceSpy: jasmine.SpyObj<ApiService>;
+  let routerSpy: jasmine.SpyObj<Router>;
 
   beforeEach(async () => {
+    apiServiceSpy = jasmine.createSpyObj('ApiService', ['register', 'checkEmailExists']);
+    routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+
     await TestBed.configureTestingModule({
-      imports: [
-        RegisterComponent,
-        ReactiveFormsModule,
-        HttpClientTestingModule
-      ],
+      imports: [RegisterComponent],
       providers: [
-        { provide: AuthService, useValue: mockAuthService },
-        { provide: ToastrService, useValue: mockToastr },
-        {
-          provide: Router,
-          useValue: { navigate: jest.fn() }
-        }
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ApiService, useValue: apiServiceSpy },
+        { provide: Router, useValue: routerSpy }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(RegisterComponent);
     component = fixture.componentInstance;
-    authService = TestBed.inject(AuthService) as jest.Mocked<AuthService>;
-    router = TestBed.inject(Router);
-    toastr = TestBed.inject(ToastrService) as jest.Mocked<ToastrService>;
-    el = fixture.debugElement;
-
     fixture.detectChanges();
   });
 
@@ -58,122 +36,142 @@ describe('RegisterComponent', () => {
   });
 
   it('deve ter o formulário inválido quando vazio', () => {
-    expect(component.form.valid).toBeFalsy();
+    expect(component.registerForm.valid).toBeFalsy();
   });
 
   it('deve validar campos obrigatórios', () => {
-    const controls = component.form.controls;
-
+    const controls = component.registerForm.controls;
+    
     expect(controls['name'].hasError('required')).toBeTruthy();
     expect(controls['email'].hasError('required')).toBeTruthy();
     expect(controls['phone'].hasError('required')).toBeTruthy();
     expect(controls['password'].hasError('required')).toBeTruthy();
-    expect(controls['cep'].hasError('required')).toBeTruthy();
   });
 
-  it('deve preencher o formulário corretamente', () => {
-    component.form.patchValue({
-      name: 'Barbearia do Zé',
-      email: 'ze@teste.com',
-      phone: '11999999999',
-      password: 'senha123',
-      cep: '01001-000',
-      logradouro: 'Praça da Sé',
-      numero: '100',
-      bairro: 'Centro',
-      cidade: 'São Paulo',
-      uf: 'SP',
-      businessType: 'Barbearia',
-      operatingHours: '{"startTime":"09:00","endTime":"18:00"}'
-    });
-
-    // Simula upload de logo
-    const file = new File(['fake'], 'logo.png', { type: 'image/png' });
-    const event = { target: { files: [file] } } as any;
-    component.onLogoSelected(event);
-
-    expect(component.form.valid).toBeTruthy();
-    expect(component.logoFile).toBe(file);
+  it('deve validar formato de email', () => {
+    const emailControl = component.registerForm.get('email');
+    
+    emailControl?.setValue('invalid');
+    expect(emailControl?.hasError('email')).toBeTruthy();
+    
+    emailControl?.setValue('valid@email.com');
+    expect(emailControl?.hasError('email')).toBeFalsy();
   });
 
-  it('deve cadastrar empresa com sucesso e redirecionar', fakeAsync(() => {
-    // Mock da resposta do backend
-    mockAuthService.registerCompany.mockReturnValue(of({
+  it('deve validar formato de telefone', () => {
+    const phoneControl = component.registerForm.get('phone');
+    
+    phoneControl?.setValue('123');
+    expect(phoneControl?.hasError('pattern')).toBeTruthy();
+    
+    phoneControl?.setValue('(11) 99999-9999');
+    expect(phoneControl?.hasError('pattern')).toBeFalsy();
+  });
+
+  it('deve atualizar critérios de senha ao digitar', () => {
+    const passwordControl = component.registerForm.get('password');
+    
+    passwordControl?.setValue('abc');
+    expect(component.passwordCriteria.length).toBeFalsy();
+    expect(component.passwordCriteria.lower).toBeTruthy();
+    
+    passwordControl?.setValue('Abc12345!');
+    expect(component.passwordCriteria.length).toBeTruthy();
+    expect(component.passwordCriteria.upper).toBeTruthy();
+    expect(component.passwordCriteria.lower).toBeTruthy();
+    expect(component.passwordCriteria.number).toBeTruthy();
+    expect(component.passwordCriteria.special).toBeTruthy();
+  });
+
+  it('deve trocar tipo de cadastro entre client e company', () => {
+    expect(component.type).toBe('client');
+    
+    component.onTypeChange(1);
+    expect(component.type).toBe('company');
+    
+    component.onTypeChange(0);
+    expect(component.type).toBe('client');
+  });
+
+  it('deve validar campos de endereço quando tipo é company', () => {
+    component.onTypeChange(1);
+    
+    const cepControl = component.registerForm.get('cep');
+    const logradouroControl = component.registerForm.get('logradouro');
+    
+    expect(cepControl?.hasError('required')).toBeTruthy();
+    expect(logradouroControl?.hasError('required')).toBeTruthy();
+  });
+
+  it('deve cadastrar cliente com sucesso', fakeAsync(() => {
+    apiServiceSpy.checkEmailExists.and.returnValue(of(false as any));
+    apiServiceSpy.register.and.returnValue(of({
       success: true,
-      message: 'Empresa cadastrada com sucesso!'
+      user: { id: 1, name: 'Teste', email: 'teste@email.com' },
+      message: 'Cadastro realizado!'
     }));
 
-    // Preenche formulário
-    component.form.patchValue({
-      name: 'Salão Bela',
-      email: 'bela@teste.com',
-      phone: '11988887777',
-      password: 'senha123',
-      cep: '01001-000',
-      logradouro: 'Av. Paulista',
-      numero: '1000',
-      bairro: 'Bela Vista',
-      cidade: 'São Paulo',
-      uf: 'SP',
-      businessType: 'Salão de Beleza',
-      operatingHours: '{"startTime":"08:00","endTime":"20:00"}'
-    });
-
-    const file = new File(['fake'], 'logo.png', { type: 'image/png' });
-    const event = { target: { files: [file] } } as any;
-    component.onLogoSelected(event);
-
-    // Submit
-    component.onSubmit();
-    tick(); // espera o async
-
-    expect(authService.registerCompany).toHaveBeenCalled();
-    expect(toastr.success).toHaveBeenCalledWith('Empresa cadastrada com sucesso!', 'Sucesso');
-    expect(router.navigate).toHaveBeenCalledWith(['/confirmar-email']);
-  }));
-
-  it('deve mostrar erro se o cadastro falhar', fakeAsync(() => {
-    mockAuthService.registerCompany.mockReturnValue(throwError(() => ({
-      error: { message: 'E-mail já cadastrado' }
-    })));
-
-    component.form.patchValue({
-      name: 'Duplicada',
-      email: 'existe@teste.com',
-      phone: '11999999999',
-      password: '123456',
-      cep: '01001-000',
-      logradouro: 'Rua X',
-      numero: '1',
-      bairro: 'Centro',
-      cidade: 'SP',
-      uf: 'SP',
-      businessType: 'Barbearia'
+    component.registerForm.patchValue({
+      name: 'Teste',
+      email: 'teste@email.com',
+      phone: '(11) 99999-9999',
+      password: 'Senha@123'
     });
 
     component.onSubmit();
     tick();
 
-    expect(toastr.error).toHaveBeenCalledWith('E-mail já cadastrado', 'Erro no cadastro');
+    expect(apiServiceSpy.register).toHaveBeenCalled();
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/verify-email'], jasmine.any(Object));
   }));
 
-  it('deve simular upload de logo e mostrar preview', () => {
-    const file = new File(['fake'], 'logo.png', { type: 'image/png' });
-    const event = {
-      target: { files: [file] }
-    } as unknown as Event;
+  it('deve mostrar erro se email já existe', fakeAsync(() => {
+    apiServiceSpy.checkEmailExists.and.returnValue(of(true as any));
 
-    component.onLogoSelected(event);
+    component.registerForm.patchValue({
+      name: 'Teste',
+      email: 'existe@email.com',
+      phone: '(11) 99999-9999',
+      password: 'Senha@123'
+    });
 
-    expect(component.logoFile).toBe(file);
-    expect(component.logoPreview).toContain('blob:'); // FileReader cria blob URL
+    component.onSubmit();
+    tick();
+
+    expect(component.error).toContain('E-mail já cadastrado');
+    expect(apiServiceSpy.register).not.toHaveBeenCalled();
+  }));
+
+  it('deve formatar CEP corretamente', () => {
+    const event = { target: { value: '01001000' } } as unknown as Event;
+    component.formatCep(event);
+    
+    expect(component.registerForm.get('cep')?.value).toBe('01001-000');
   });
 
-  it('deve limpar preview ao remover logo', () => {
-    component.logoPreview = 'http://blob/fake';
-    component.removeLogo();
+  it('deve formatar telefone corretamente', () => {
+    const event = { target: { value: '11999999999' } } as unknown as Event;
+    component.formatPhone(event);
+    
+    expect(component.registerForm.get('phone')?.value).toBe('(11) 99999-9999');
+  });
 
-    expect(component.logoFile).toBeNull();
-    expect(component.logoPreview).toBe('');
+  it('deve calcular progresso da senha corretamente', () => {
+    component.registerForm.get('password')?.setValue('');
+    expect(component.passwordProgress).toBe(0);
+    
+    component.registerForm.get('password')?.setValue('Senha@123');
+    expect(component.passwordProgress).toBe(100);
+  });
+
+  it('deve retornar cor correta baseada no progresso da senha', () => {
+    component.registerForm.get('password')?.setValue('a');
+    expect(component.passwordStrengthColor).toBe('bg-red-500');
+    
+    component.registerForm.get('password')?.setValue('Abc123');
+    expect(component.passwordStrengthColor).toBe('bg-yellow-500');
+    
+    component.registerForm.get('password')?.setValue('Senha@123');
+    expect(component.passwordStrengthColor).toBe('bg-green-500');
   });
 });
