@@ -168,10 +168,15 @@ export class AdminGeneralComponent implements OnInit {
           return;
         }
         const data = responses.company.data as CompanyDto;
+        console.log('📦 Dados da empresa recebidos:', data);
+        console.log('⏰ operatingHours:', data.operatingHours);
         this.companyForm.patchValue(data);
         if (data.operatingHours) {
           const [startTime, endTime] = data.operatingHours.split('-');
+          console.log('⏰ Parsed times:', { startTime, endTime });
           this.companyForm.patchValue({ startTime: startTime?.trim() || '10:00', endTime: endTime?.trim() || '18:00' });
+        } else {
+          console.warn('⚠️ operatingHours está vazio ou undefined!');
         }
         this.employees = (responses.employees?.success === true ? (responses.employees.data || []) : []).map((emp: Employee) => ({
           ...emp,

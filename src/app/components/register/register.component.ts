@@ -403,6 +403,7 @@ export class RegisterComponent implements OnInit {
     } else {
       // Formato: "HH:MM-HH:MM" (ex: "09:00-18:00")
       const operatingHours = startTime && endTime ? `${startTime}-${endTime}` : '';
+      console.log('📤 Enviando operatingHours:', operatingHours);
       const userData = new FormData();
       userData.append('name', formValue.name || '');
       userData.append('email', formValue.email || '');
