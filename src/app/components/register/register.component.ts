@@ -401,7 +401,8 @@ export class RegisterComponent implements OnInit {
           }
         });
     } else {
-      const operatingHours = startTime && endTime ? JSON.stringify({ startTime, endTime }) : '';
+      // Formato: "HH:MM-HH:MM" (ex: "09:00-18:00")
+      const operatingHours = startTime && endTime ? `${startTime}-${endTime}` : '';
       const userData = new FormData();
       userData.append('name', formValue.name || '');
       userData.append('email', formValue.email || '');
