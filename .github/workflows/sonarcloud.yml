@@ -129,7 +129,7 @@ jobs:
           args: >
             -Dsonar.projectKey=EuMesmoMatheus_vea-frontend
             -Dsonar.organization=eumesmomatheus
-            -Dsonar.projectName=VEA Frontend
+            -Dsonar.projectName=VEA-Frontend
             -Dsonar.sources=src
             -Dsonar.tests=src
             -Dsonar.test.inclusions=**/*.spec.ts
