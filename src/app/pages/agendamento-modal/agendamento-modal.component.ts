@@ -169,10 +169,17 @@ export class AgendamentoModalComponent implements OnChanges {
     this.api.getAgendaDoDia(this.companyId, this.selectedEmployee.id, this.selectedDate)
       .subscribe({
         next: (events: AgendaEvent[]) => {
+          const now = new Date();
+          const isToday = this.selectedDate === now.toISOString().split('T')[0];
+          
           this.availableSlots = possibleSlots.filter(slot => {
             const slotStart = new Date(`${this.selectedDate}T${slot}:00`);
             const slotEnd = new Date(slotStart.getTime() + totalMinutes * 60000);
             const dayEnd = new Date(`${this.selectedDate}T${workHours.end}:00`);
+            
+            // Se for hoje, não mostra horários que já passaram
+            if (isToday && slotStart <= now) return false;
+            
             if (slotEnd > dayEnd) return false;
 
             return !events.some(ev => {

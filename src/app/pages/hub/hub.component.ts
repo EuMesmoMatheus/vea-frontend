@@ -8,8 +8,8 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { timeout, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { TrackByFunction } from '@angular/core';
-// CORREÇÃO: Import ajustado para subpasta 'agendamento-modal/'
-import { AgendamentoModalComponent } from '../agendamento-modal/agendamento-modal.component';  // <- Correto: subpasta agendamento-modal
+import { AgendamentoModalComponent } from '../agendamento-modal/agendamento-modal.component';
+import { environment } from '../../../environments/environment';
 
 /**
  * Componente de Hub para exibição de empresas cadastradas.
@@ -64,7 +64,7 @@ export class HubComponent implements OnInit {
   loadingLocation = false;
   user: any = {};
   private searchSubject = new Subject<string>();
-  private apiBaseUrl = 'https://localhost:63561';
+  private apiBaseUrl = environment.apiUrl;
   private ibgeApiUrl = 'https://servicodados.ibge.gov.br/api/v1/localidades';
   // Modal props (sem Angular Material, usando flag)
   showModal = false;
