@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Service, Employee, AgendaEvent } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -32,7 +33,7 @@ export class AgendamentoModalComponent implements OnChanges {
   // URL DO BACKEND - usa environment
   private readonly apiBaseUrl = environment.apiUrl;
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private toast: ToastService) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['companyId'] && this.companyId) {
@@ -192,15 +193,15 @@ export class AgendamentoModalComponent implements OnChanges {
     this.api.createAppointment(payload).subscribe({
       next: (res) => {
         if (res.success) {
-          alert('Agendamento confirmado com sucesso!');
+          this.toast.success('Agendamento confirmado com sucesso! ✅');
           this.close.emit({ success: true });
         } else {
-          alert('Erro ao agendar.');
+          this.toast.error('Erro ao agendar. Tente novamente.');
         }
         this.loading = false;
       },
       error: () => {
-        alert('Erro ao agendar. Tente novamente.');
+        this.toast.error('Erro ao agendar. Tente novamente. ❌');
         this.loading = false;
       }
     });

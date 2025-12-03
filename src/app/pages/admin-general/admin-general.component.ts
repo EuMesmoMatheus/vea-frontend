@@ -7,7 +7,6 @@ import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
 import { ToastService } from '../../services/toast.service';
-import { ToastGlobalComponent } from '../../components/toast-global/toast-global.component';
 
 interface ApiResponse<T = any> {
   success?: boolean;
@@ -86,8 +85,7 @@ import { ReportsTabComponent } from '../admin/reports-tab/reports-tab.component'
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, FormsModule,
-    AgendaTabComponent, ServicesTabComponent, EmployeesTabComponent, CompanyTabComponent, ReportsTabComponent,
-    ToastGlobalComponent
+    AgendaTabComponent, ServicesTabComponent, EmployeesTabComponent, CompanyTabComponent, ReportsTabComponent
   ],
   templateUrl: './admin-general.component.html',
   styleUrls: ['./admin-general.component.css'],

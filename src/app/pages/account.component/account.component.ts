@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Appointment } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -28,7 +29,7 @@ export class AccountComponent implements OnInit {
   // MODAL: ESSA LINHA É OBRIGATÓRIA!
   selectedAppointment: Appointment | null = null;
 
-  constructor(private api: ApiService, private router: Router) {}
+  constructor(private api: ApiService, private router: Router, private toast: ToastService) {}
 
   ngOnInit(): void {
     this.loadUser();
@@ -125,9 +126,9 @@ export class AccountComponent implements OnInit {
         next: () => {
           this.loadAppointments();
           this.selectedAppointment = null; // fecha o modal se estiver aberto
-          alert('Cancelado com sucesso!');
+          this.toast.success('Agendamento cancelado com sucesso! ✅');
         },
-        error: () => alert('Erro ao cancelar.')
+        error: () => this.toast.error('Erro ao cancelar agendamento. ❌')
       });
     }
   }
