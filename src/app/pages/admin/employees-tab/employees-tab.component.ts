@@ -341,11 +341,18 @@ export class EmployeesTabComponent {
           if (response.success === true) {
             this.employeeSaved.emit({ id } as Employee);
             this.toastService.show('Funcionário deletado com sucesso!', 'success');
+          } else {
+            // Backend retornou success: false
+            const msg = response.message || 'Não foi possível excluir o funcionário.';
+            this.toastService.show(msg, 'error');
           }
         },
         error: (err) => {
-          this.error = 'Erro ao excluir: ' + err.message;
-          this.toastService.show('Falha ao deletar funcionário.', 'error');
+          // Tenta extrair mensagem do backend
+          const backendMsg = err.error?.message || err.error?.Message || err.error?.title;
+          const errorMsg = backendMsg || 'Não foi possível excluir. O funcionário pode ter agendamentos vinculados.';
+          this.error = errorMsg;
+          this.toastService.show(errorMsg, 'error');
         }
       });
     }
