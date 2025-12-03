@@ -139,8 +139,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
         });
         break;
       case 'Employee':
-        console.log('Case Employee - Navegando pra /employee/agenda');
-        this.router.navigate(['/employee/agenda']);
+        console.log('Case Employee - Navegando pra /employee/dashboard');
+        this.router.navigate(['/employee/dashboard']);
         break;
       case 'Client':
         console.log('Case Client - Navegando pra /hub');

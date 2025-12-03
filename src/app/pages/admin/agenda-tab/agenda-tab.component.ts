@@ -255,5 +255,23 @@ export class AgendaTabComponent implements OnInit, OnChanges {
     }
   }
 
+  /**
+   * Verifica se o agendamento já foi realizado (passou do horário de término)
+   */
+  isAlreadyDone(appt: LocalAppointment): boolean {
+    const now = new Date();
+    const end = appt.endDateTime
+      ? new Date(appt.endDateTime)
+      : new Date(appt.dateTime.getTime() + (appt.totalDurationMinutes || 60) * 60000);
+    return end < now;
+  }
+
+  /**
+   * Verifica se o agendamento pode ser cancelado
+   */
+  canCancel(appt: LocalAppointment): boolean {
+    return appt.status !== 'Cancelled' && !this.isAlreadyDone(appt);
+  }
+
   // Removido: Getter 'appointments' (não mais necessário, pois HTML usa funções que acessam allAppointments diretamente)
 }

@@ -56,7 +56,7 @@
             <tr *ngFor="let hour of hours" class="border-t border-gray-100 hover:bg-gray-50/50 transition-all">
               <td class="w-20 p-3 text-sm font-medium text-gray-600 bg-gray-50 border-r border-gray-200 whitespace-nowrap">{{ hour }}</td>
               <td *ngFor="let day of weekDays" [class]="day.isToday ? 'bg-yellow-50/80' : ''" class="p-2 min-h-[60px] relative border-r border-gray-100 last:border-r-0">
-                <div *ngFor="let appt of getAppointmentsForDayHour(day.date, hour)" class="mb-1 p-2 rounded-lg text-xs shadow-sm transition-all hover:scale-105" [ngClass]="{
+                <div *ngFor="let appt of getAppointmentsForDayHour(day.date, hour)" class="mb-1 p-2 rounded-lg text-xs shadow-sm transition-all hover:scale-105 group relative" [ngClass]="{
                   'bg-green-100 text-green-800 border border-green-200': appt.status === 'Confirmed' || appt.status === 'Scheduled',
                   'bg-red-100 text-red-800 border border-red-200': appt.status === 'Cancelled',
                   'bg-pink-100 text-pink-800 border border-pink-200': appt.status === 'Available'
@@ -71,6 +71,13 @@
                       'text-gray-600': appt.status === 'Available'
                     }">{{ getStatusIcon(appt.status) }}</span>
                   </div>
+                  <!-- Botão de cancelar -->
+                  <button *ngIf="canCancel(appt)" 
+                    (click)="cancelAppointment(appt.id); $event.stopPropagation()" 
+                    class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600"
+                    title="Cancelar agendamento">
+                    ✕
+                  </button>
                 </div>
                 <div *ngIf="getAppointmentsForDayHour(day.date, hour).length === 0" class="text-xs text-gray-400 text-center py-2">Livre</div>
               </td>
@@ -115,6 +122,13 @@
                 'bg-gray-100 text-gray-800': true
               }">{{ appt.status }}</span>
             </div>
+            <!-- Botão de cancelar na visão diária -->
+            <button *ngIf="canCancel(appt)" 
+              (click)="cancelAppointment(appt.id)" 
+              class="px-3 py-1.5 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 transition-colors"
+              title="Cancelar agendamento">
+              Cancelar
+            </button>
           </div>
         </div>
       </div>
@@ -162,7 +176,13 @@
                 </span>
               </td>
               <td class="p-3">
-                <!-- Botão de cancelar removido -->
+                <button *ngIf="canCancel(appt)" 
+                  (click)="cancelAppointment(appt.id)" 
+                  class="px-3 py-1.5 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 transition-colors"
+                  title="Cancelar agendamento">
+                  Cancelar
+                </button>
+                <span *ngIf="!canCancel(appt)" class="text-xs text-gray-400">—</span>
               </td>
             </tr>
             <tr *ngIf="monthAppointments.length === 0">

@@ -106,6 +106,30 @@ export interface AgendaEvent {
   clientName?: string;
 }
 
+export interface EmployeeAppointment {
+  id: number;
+  startDateTime: string;
+  endDateTime: string;
+  status: string;
+  clientName: string;
+  clientPhone?: string;
+  services: Array<{
+    id: number;
+    name: string;
+    duration?: number;
+    price?: number;
+  }>;
+  totalDurationMinutes: number;
+}
+
+export interface EmployeeAppointmentsResponse {
+  period: 'today' | 'week' | 'month';
+  startDate: string;
+  endDate: string;
+  totalAppointments: number;
+  appointments: EmployeeAppointment[];
+}
+
 // ======================= API SERVICE =======================
 @Injectable({
   providedIn: 'root'
@@ -329,6 +353,32 @@ export class ApiService {
   cancelAppointment(id: number): Observable<ApiResponse<any>> {
     return this.http.patch<ApiResponse<any>>(`${this.apiUrl}/appointments/${id}/cancel`, {}, { headers: this.getAuthHeaders() })
       .pipe(catchError(this.handleError('Falha ao cancelar agendamento')));
+  }
+
+  // ==================== EMPLOYEE (PRESTADOR) ====================
+  getEmployeeProfile(): Observable<ApiResponse<Employee>> {
+    return this.http.get<ApiResponse<Employee>>(`${this.apiUrl}/employees/me`, { headers: this.getAuthHeaders() })
+      .pipe(catchError(this.handleError('Falha ao buscar perfil do prestador')));
+  }
+
+  getEmployeeAppointmentsToday(): Observable<ApiResponse<EmployeeAppointmentsResponse>> {
+    return this.http.get<ApiResponse<EmployeeAppointmentsResponse>>(`${this.apiUrl}/appointments/employee/today`, { headers: this.getAuthHeaders() })
+      .pipe(catchError(this.handleError('Falha ao buscar agendamentos de hoje')));
+  }
+
+  getEmployeeAppointmentsWeek(date?: string): Observable<ApiResponse<EmployeeAppointmentsResponse>> {
+    let params = new HttpParams();
+    if (date) params = params.set('date', date);
+    return this.http.get<ApiResponse<EmployeeAppointmentsResponse>>(`${this.apiUrl}/appointments/employee/week`, { params, headers: this.getAuthHeaders() })
+      .pipe(catchError(this.handleError('Falha ao buscar agendamentos da semana')));
+  }
+
+  getEmployeeAppointmentsMonth(year: number, month: number): Observable<ApiResponse<EmployeeAppointmentsResponse>> {
+    const params = new HttpParams()
+      .set('year', year.toString())
+      .set('month', month.toString());
+    return this.http.get<ApiResponse<EmployeeAppointmentsResponse>>(`${this.apiUrl}/appointments/employee/month`, { params, headers: this.getAuthHeaders() })
+      .pipe(catchError(this.handleError('Falha ao buscar agendamentos do mês')));
   }
 
   // ==================== MÉTODOS PÚBLICOS DO MODAL ====================
