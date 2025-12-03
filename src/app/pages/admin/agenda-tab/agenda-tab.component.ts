@@ -22,10 +22,11 @@ interface LocalAppointment extends Appointment {
 })
 export class AgendaTabComponent implements OnInit, OnChanges {
   @Input() companyId!: number; // Obrigatório: ID da empresa
+  @Input() operatingHours: string = '08:00-18:00'; // Horário de funcionamento (formato: HH:MM-HH:MM)
   @Output() apptCancelled = new EventEmitter<void>();
 
   selectedView: 'week' | 'day' | 'month' = 'week'; // Adicionado 'month'
-  hours: string[] = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
+  hours: string[] = []; // Gerado dinamicamente baseado no operatingHours
   weekDays: { label: string; date: string; isToday: boolean; appointmentsCount: number }[] = [];
   dayAppointments: LocalAppointment[] = [];
   monthAppointments: LocalAppointment[] = []; // Novo: Para visão mensal
@@ -44,14 +45,32 @@ export class AgendaTabComponent implements OnInit, OnChanges {
   ) {}
 
   ngOnInit(): void {
+    this.generateHoursFromOperatingHours();
     if (this.companyId) {
       this.onViewChange(); // Carrega inicial baseado na view default
     }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['operatingHours']) {
+      this.generateHoursFromOperatingHours();
+    }
     if (changes['companyId'] && this.companyId) {
       this.onViewChange(); // Recarrega se companyId mudar
+    }
+  }
+
+  /**
+   * Gera array de horários baseado no operatingHours da empresa
+   */
+  private generateHoursFromOperatingHours(): void {
+    const [start, end] = this.operatingHours?.split('-') || ['08:00', '18:00'];
+    const startHour = parseInt(start?.split(':')[0] || '8', 10);
+    const endHour = parseInt(end?.split(':')[0] || '18', 10);
+    
+    this.hours = [];
+    for (let h = startHour; h <= endHour; h++) {
+      this.hours.push(`${h.toString().padStart(2, '0')}:00`);
     }
   }
 

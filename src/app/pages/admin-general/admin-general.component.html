@@ -82,8 +82,7 @@
   </nav>
   <!-- Switch Tabs: Renderiza filhos (sem mudanças, mas garanta (companyUpdated) no child) -->
   <div [ngSwitch]="activeTab" class="bg-white rounded-xl shadow-lg p-8">
-    <!-- <<< FIX: Removido [appointments]="appointments" e adicionado [companyId]="companyId" >>> -->
-    <app-agenda-tab *ngSwitchCase="tabs.Agenda" [companyId]="companyId" (apptCancelled)="onAppointmentCancelled()"></app-agenda-tab>
+    <app-agenda-tab *ngSwitchCase="tabs.Agenda" [companyId]="companyId" [operatingHours]="companyForm.get('operatingHours')?.value || (companyForm.get('startTime')?.value + '-' + companyForm.get('endTime')?.value)" (apptCancelled)="onAppointmentCancelled()"></app-agenda-tab>
     <app-services-tab *ngSwitchCase="tabs.Services" [services]="services" (serviceSaved)="onServiceSaved($event)" (serviceDeleted)="onServiceDeleted($event)"></app-services-tab>
     <app-employees-tab *ngSwitchCase="tabs.Employees" [employees]="employees" [roles]="roles" (employeeSaved)="onEmployeeSaved($event)" (roleSaved)="onRoleSaved($event)"></app-employees-tab>
     <app-company-tab *ngSwitchCase="tabs.Company" [companyForm]="companyForm" [businessTypes]="businessTypes" [companyId]="companyId" (companyUpdated)="onCompanyUpdated()"></app-company-tab>

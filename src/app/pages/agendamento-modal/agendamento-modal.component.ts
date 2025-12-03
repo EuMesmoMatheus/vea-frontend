@@ -32,15 +32,40 @@ export class AgendamentoModalComponent implements OnChanges {
 
   // URL DO BACKEND - usa environment
   private readonly apiBaseUrl = environment.apiUrl;
+  
+  // Horário de funcionamento da empresa (carregado da API)
+  private companyOperatingHours: { start: string; end: string } = { start: '08:00', end: '18:00' };
 
   constructor(private api: ApiService, private toast: ToastService) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['companyId'] && this.companyId) {
       this.resetAll();
+      this.loadCompanyInfo();
       this.loadServices();
       this.loadEmployees();
     }
+  }
+
+  /**
+   * Carrega informações da empresa, incluindo horário de funcionamento
+   */
+  private loadCompanyInfo(): void {
+    this.api.getCompany(this.companyId).subscribe({
+      next: (response) => {
+        if (response.success && response.data?.operatingHours) {
+          const [start, end] = response.data.operatingHours.split('-');
+          this.companyOperatingHours = {
+            start: start?.trim() || '08:00',
+            end: end?.trim() || '18:00'
+          };
+        }
+      },
+      error: () => {
+        // Usa horário padrão se falhar
+        this.companyOperatingHours = { start: '08:00', end: '18:00' };
+      }
+    });
   }
 
   private resetAll() {
@@ -231,8 +256,12 @@ export class AgendamentoModalComponent implements OnChanges {
     return slots;
   }
 
-  getWorkHours(date: string): { start: string; end: string } {
-    const day = new Date(date).getDay();
-    return (day === 0 || day === 6) ? { start: '09:00', end: '14:00' } : { start: '08:00', end: '19:00' };
+  /**
+   * Retorna horário de funcionamento da empresa
+   * Usa os dados carregados da API (operatingHours)
+   */
+  getWorkHours(_date: string): { start: string; end: string } {
+    // Usa o horário de funcionamento da empresa carregado da API
+    return this.companyOperatingHours;
   }
 }
