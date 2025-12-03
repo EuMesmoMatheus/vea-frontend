@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService, Employee, EmployeeAppointment, EmployeeAppointmentsResponse } from '../../services/api.service';
@@ -8,7 +8,7 @@ import { ToastService } from '../../services/toast.service';
 @Component({
   selector: 'app-employee-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, DatePipe],
+  imports: [CommonModule, FormsModule],
   templateUrl: './employee-dashboard.component.html',
   styleUrls: ['./employee-dashboard.component.css']
 })

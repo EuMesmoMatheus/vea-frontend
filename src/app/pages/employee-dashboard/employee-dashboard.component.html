@@ -23,7 +23,7 @@
             {{ employee?.name?.charAt(0)?.toUpperCase() || 'P' }}
           </div>
           <div>
-            <h1 class="text-xl font-bold text-gray-800">Olá, {{ employee?.name?.split(' ')[0] || 'Prestador' }}!</h1>
+            <h1 class="text-xl font-bold text-gray-800">Olá, {{ (employee?.name || 'Prestador').split(' ')[0] }}!</h1>
             <p class="text-sm text-gray-500">{{ employee?.roleName || employee?.cargo || 'Prestador de Serviços' }}</p>
           </div>
         </div>
@@ -73,7 +73,7 @@
             <!-- Avatar e Info Principal -->
             <div class="flex items-center space-x-4">
               <div class="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-bold text-3xl shadow-lg overflow-hidden">
-                <img *ngIf="employee?.fullPhotoUrl" [src]="employee.fullPhotoUrl" alt="Foto" class="w-full h-full object-cover">
+                <img *ngIf="employee?.fullPhotoUrl" [src]="employee?.fullPhotoUrl" alt="Foto" class="w-full h-full object-cover">
                 <span *ngIf="!employee?.fullPhotoUrl">{{ employee?.name?.charAt(0)?.toUpperCase() || 'P' }}</span>
               </div>
               <div>
