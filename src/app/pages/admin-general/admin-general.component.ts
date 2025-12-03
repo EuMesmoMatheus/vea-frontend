@@ -7,6 +7,7 @@ import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
 import { ToastService } from '../../services/toast.service';
+import { ConfirmService } from '../../services/confirm.service';
 
 interface ApiResponse<T = any> {
   success?: boolean;
@@ -127,7 +128,8 @@ export class AdminGeneralComponent implements OnInit {
     private api: ApiService,
     private cdr: ChangeDetectorRef,
     private router: Router,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private confirmService: ConfirmService
   ) {
     this.initializeCompanyForm();
   }
@@ -324,8 +326,13 @@ export class AdminGeneralComponent implements OnInit {
     this.toastService.show(message, 'error');
   }
 
-  onServiceDeleted(id: number): void {
-    if (!confirm('Tem certeza? Isso remove o serviço permanentemente.')) return;
+  async onServiceDeleted(id: number): Promise<void> {
+    const confirmed = await this.confirmService.danger(
+      'Isso remove o serviço permanentemente. Deseja continuar?',
+      'Excluir Serviço'
+    );
+    if (!confirmed) return;
+    
     this.api.deleteService(id).subscribe({
       next: (response) => {
         if (response.success) {

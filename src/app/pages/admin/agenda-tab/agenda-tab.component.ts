@@ -2,7 +2,9 @@ import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, Change
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { ApiService, Appointment } from '..//../../services/api.service'; // Ajuste o path pro seu api.service
+import { ApiService, Appointment } from '..//../../services/api.service';
+import { ConfirmService } from '../../../services/confirm.service';
+import { ToastService } from '../../../services/toast.service';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -34,7 +36,12 @@ export class AgendaTabComponent implements OnInit, OnChanges {
   allAppointments: LocalAppointment[] = []; // Unificado: Todos os appts carregados para o range
   loading = false; // Indicador de load
 
-  constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private api: ApiService, 
+    private cdr: ChangeDetectorRef,
+    private confirmService: ConfirmService,
+    private toast: ToastService
+  ) {}
 
   ngOnInit(): void {
     if (this.companyId) {
@@ -193,16 +200,22 @@ export class AgendaTabComponent implements OnInit, OnChanges {
     }
   }
 
-  cancelAppointment(id: number): void {
-    if (confirm('Deseja cancelar este agendamento?')) {
+  async cancelAppointment(id: number): Promise<void> {
+    const confirmed = await this.confirmService.danger(
+      'Deseja cancelar este agendamento?',
+      'Cancelar Agendamento'
+    );
+    
+    if (confirmed) {
       this.api.cancelAppointment(id).subscribe({
         next: (res) => {
           if (res.success) {
-            this.onViewChange(); // Recarrega dados
+            this.onViewChange();
             this.apptCancelled.emit();
+            this.toast.success('Agendamento cancelado! ✅');
           }
         },
-        error: (err) => console.error('Erro ao cancelar:', err)
+        error: () => this.toast.error('Erro ao cancelar agendamento. ❌')
       });
     }
   }

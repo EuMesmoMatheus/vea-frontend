@@ -3,6 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Appointment } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -29,7 +30,12 @@ export class AccountComponent implements OnInit {
   // MODAL: ESSA LINHA É OBRIGATÓRIA!
   selectedAppointment: Appointment | null = null;
 
-  constructor(private api: ApiService, private router: Router, private toast: ToastService) {}
+  constructor(
+    private api: ApiService, 
+    private router: Router, 
+    private toast: ToastService,
+    private confirmService: ConfirmService
+  ) {}
 
   ngOnInit(): void {
     this.loadUser();
@@ -120,12 +126,17 @@ export class AccountComponent implements OnInit {
   goBackToHub(): void { this.router.navigate(['/hub']); }
   goToLogin(): void { this.router.navigate(['/login']); }
 
-  cancelAppointment(id: number): void {
-    if (confirm('Tem certeza que deseja cancelar este agendamento?')) {
+  async cancelAppointment(id: number): Promise<void> {
+    const confirmed = await this.confirmService.danger(
+      'Tem certeza que deseja cancelar este agendamento?',
+      'Cancelar Agendamento'
+    );
+    
+    if (confirmed) {
       this.api.cancelAppointment(id).subscribe({
         next: () => {
           this.loadAppointments();
-          this.selectedAppointment = null; // fecha o modal se estiver aberto
+          this.selectedAppointment = null;
           this.toast.success('Agendamento cancelado com sucesso! ✅');
         },
         error: () => this.toast.error('Erro ao cancelar agendamento. ❌')

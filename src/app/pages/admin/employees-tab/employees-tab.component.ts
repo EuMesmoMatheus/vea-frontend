@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angula
 import { ApiService } from '../../../services/api.service';
 import { RoleModalComponent } from '../modals/role-modal/role-modal.component';
 import { ToastService } from '../../../services/toast.service';
+import { ConfirmService } from '../../../services/confirm.service';
 import { jwtDecode } from 'jwt-decode';
 
 interface Employee {
@@ -53,7 +54,8 @@ export class EmployeesTabComponent {
     private fb: FormBuilder,
     private api: ApiService,
     private cdr: ChangeDetectorRef,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private confirmService: ConfirmService
   ) {
     this.employeeForm = this.fb.group({
       name: ['', Validators.required],
@@ -327,8 +329,13 @@ export class EmployeesTabComponent {
     });
   }
 
-  deleteEmployee(id: number): void {
-    if (confirm('Tem certeza?')) {
+  async deleteEmployee(id: number): Promise<void> {
+    const confirmed = await this.confirmService.danger(
+      'Tem certeza que deseja excluir este funcionário?',
+      'Excluir Funcionário'
+    );
+    
+    if (confirmed) {
       this.api.deleteEmployee(id).subscribe({
         next: (response) => {
           if (response.success === true) {
