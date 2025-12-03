@@ -86,8 +86,10 @@ export class AgendamentoModalComponent implements OnChanges {
 
   loadEmployees() {
     this.api.getEmployeesByService(this.companyId, 0).subscribe(employees => {
-      // Filtra apenas funcionários com email verificado (ativos de verdade)
+      console.log('👥 Funcionários recebidos:', employees.map(e => ({ name: e.name, emailVerified: e.emailVerified })));
+      // Filtra apenas funcionários com email verificado
       this.employees = employees.filter(emp => emp.emailVerified === true);
+      console.log('👥 Funcionários após filtro:', this.employees.length);
     });
   }
 
