@@ -9,15 +9,15 @@ import { catchError, throwError } from 'rxjs';
  * Responsabilidades:
  * - Adiciona token de autorização em requisições
  * - Adiciona headers de segurança
- * - Trata erros de autenticação (401, 403)
- * - Redireciona para login quando sessão expira
+ * - Trata erros de autenticação (401)
+ * - NÃO redireciona no 403 (deixa o componente tratar)
  */
 export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, next: HttpHandlerFn) => {
   const router = inject(Router);
   
   // Recupera token do storage (usa chave com prefixo se existir)
   const token = localStorage.getItem('vea_token') || localStorage.getItem('token');
-  const companyId = localStorage.getItem('vea_companyId') || localStorage.getItem('companyId') || '';
+  const companyId = localStorage.getItem('vea_companyId') || localStorage.getItem('companyId');
 
   // URLs públicas que não precisam de autenticação
   const publicUrls = [
@@ -35,48 +35,65 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
 
   const isPublicUrl = publicUrls.some(url => req.url.includes(url));
 
-  // Clona a requisição com headers de segurança
-  let modifiedReq = req.clone({
-    setHeaders: {
-      // Headers de segurança
-      'X-Content-Type-Options': 'nosniff',
-      'X-Requested-With': 'XMLHttpRequest',
-      // Evita MIME type sniffing
-      ...(req.method !== 'GET' && { 'Content-Type': req.headers.get('Content-Type') || 'application/json' })
-    }
-  });
+  // Se já tem header Authorization na requisição original, não sobrescreve
+  const hasAuthHeader = req.headers.has('Authorization');
 
-  // Adiciona Authorization se tiver token e não for URL pública
-  if (token && !isPublicUrl) {
-    modifiedReq = modifiedReq.clone({
-      setHeaders: {
-        ...modifiedReq.headers.keys().reduce((acc, key) => ({ ...acc, [key]: modifiedReq.headers.get(key) }), {}),
-        'Authorization': `Bearer ${token}`,
-        ...(companyId && { 'CompanyId': companyId })
-      }
-    });
+  // Monta os headers
+  const headers: { [key: string]: string } = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Requested-With': 'XMLHttpRequest'
+  };
+
+  // Adiciona Content-Type para métodos que não são GET (se não tiver)
+  if (req.method !== 'GET' && !req.headers.has('Content-Type')) {
+    // Não adiciona Content-Type para FormData (deixa o browser setar o boundary)
+    if (!(req.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
   }
+
+  // Adiciona Authorization se tiver token, não for URL pública, e não tiver header já
+  if (token && !isPublicUrl && !hasAuthHeader) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Adiciona CompanyId se existir
+  if (companyId) {
+    headers['CompanyId'] = companyId;
+  }
+
+  // Clona a requisição com os novos headers
+  const modifiedReq = req.clone({ setHeaders: headers });
+
+  // Debug: Log da requisição
+  console.log('[AuthInterceptor] Request:', {
+    url: modifiedReq.url,
+    hasToken: !!token,
+    tokenPreview: token ? token.substring(0, 50) + '...' : 'N/A',
+    hasAuthHeader: modifiedReq.headers.has('Authorization'),
+    authHeader: modifiedReq.headers.get('Authorization')?.substring(0, 60) + '...',
+    isPublicUrl,
+    companyId
+  });
 
   return next(modifiedReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Trata erros de autenticação
+      console.error('[AuthInterceptor] Erro na requisição:', {
+        status: error.status,
+        url: error.url,
+        message: error.message
+      });
+
+      // 401: Apenas loga, NÃO limpa token nem redireciona (debug)
       if (error.status === 401) {
-        console.warn('[AuthInterceptor] Sessão expirada ou não autorizado');
-        
-        // Limpa dados de autenticação
-        clearAuthData();
-        
-        // Redireciona para login
-        router.navigate(['/login'], {
-          queryParams: { returnUrl: router.url, reason: 'session_expired' }
-        });
+        console.warn('[AuthInterceptor] 401 - Token enviado?', !!token);
+        console.warn('[AuthInterceptor] 401 - Auth header presente na req?', modifiedReq.headers.has('Authorization'));
+        // NÃO redireciona automaticamente - deixa o componente decidir
       }
 
+      // 403: Apenas loga
       if (error.status === 403) {
-        console.warn('[AuthInterceptor] Acesso negado');
-        router.navigate(['/login'], {
-          queryParams: { reason: 'access_denied' }
-        });
+        console.warn('[AuthInterceptor] 403 - Acesso negado - URL:', error.url);
       }
 
       return throwError(() => error);

@@ -47,14 +47,28 @@ export class EmployeeDashboardComponent implements OnInit {
 
   // ==================== PERFIL ====================
   loadProfile(): void {
+    console.log('[EmployeeDashboard] Carregando perfil...');
     this.api.getEmployeeProfile().subscribe({
       next: (res) => {
+        console.log('[EmployeeDashboard] Resposta do perfil:', res);
+        console.log('[EmployeeDashboard] res.success:', res.success);
+        console.log('[EmployeeDashboard] res.data:', res.data);
+        
+        // Tenta extrair dados de diferentes estruturas de resposta
         if (res.success && res.data) {
           this.employee = res.data;
+          console.log('[EmployeeDashboard] Employee setado:', this.employee);
+        } else if (res && !res.success && (res as any).id) {
+          // Caso o backend retorne o objeto direto sem wrapper
+          this.employee = res as any;
+          console.log('[EmployeeDashboard] Employee setado (sem wrapper):', this.employee);
+        } else {
+          console.warn('[EmployeeDashboard] Estrutura de resposta inesperada:', res);
         }
         this.loading = false;
       },
-      error: () => {
+      error: (err) => {
+        console.error('[EmployeeDashboard] Erro ao carregar perfil:', err);
         this.toast.error('Erro ao carregar perfil');
         this.loading = false;
       }
