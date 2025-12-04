@@ -62,8 +62,8 @@
   <div *ngIf="showFilters" class="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30" (click)="toggleFilters()"></div>
 
   <!-- Sidebar Filtros -->
-  <div class="w-full md:w-80 bg-white shadow-lg border-r border-gray-200 h-[calc(100vh-5rem)] fixed md:static z-40 overflow-y-auto transition-transform duration-300"
-       [class]="showFilters ? 'translate-x-0' : '-translate-x-full md:translate-x-0'">
+  <aside class="w-80 max-w-[85vw] bg-white shadow-lg border-r border-gray-200 h-[calc(100vh-5rem)] fixed left-0 top-20 z-40 overflow-y-auto transition-transform duration-300 md:translate-x-0"
+       [ngClass]="showFilters ? 'translate-x-0' : '-translate-x-full md:translate-x-0'">
 
     <div class="p-6 space-y-4 h-full flex flex-col relative bg-white">
       <div class="flex items-center justify-between mb-4">
@@ -137,7 +137,7 @@
         </button>
       </div>
     </div>
-  </div>
+  </aside>
 
   <!-- Botão mobile filtros -->
   <button *ngIf="!showFilters" class="md:hidden fixed top-24 left-4 z-50 px-4 py-2 rounded-xl bg-white border shadow-lg flex items-center gap-2" (click)="toggleFilters()">
@@ -148,7 +148,7 @@
   </button>
 
   <!-- Conteúdo principal -->
-  <div class="flex-1 md:pl-10 pt-6 max-w-7xl mx-auto w-full">
+  <div class="flex-1 pt-6 md:ml-80 px-4 md:px-6">
     <div class="text-center mb-8 px-4">
       <h2 class="text-3xl font-bold text-gray-900 mb-2">Empresas Parceiras</h2>
       <p class="text-gray-600">Descubra e agende serviços com <span class="font-semibold text-pink-600">{{ filteredCompanies.length || 0 }}</span> empresas disponíveis</p>
