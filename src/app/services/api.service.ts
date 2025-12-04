@@ -360,8 +360,12 @@ export class ApiService {
     const token = localStorage.getItem('token');
     console.log('[ApiService] getEmployeeProfile - Token presente?', !!token);
     console.log('[ApiService] getEmployeeProfile - URL:', `${this.apiUrl}/employees/me`);
-    // Passa headers explicitamente (mesmo padrão dos outros métodos)
-    return this.http.get<ApiResponse<Employee>>(`${this.apiUrl}/employees/me`, { headers: this.getAuthHeaders() })
+    // Headers obrigatórios conforme doc da API: Authorization + Content-Type
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+    return this.http.get<ApiResponse<Employee>>(`${this.apiUrl}/employees/me`, { headers })
       .pipe(catchError(this.handleError('Falha ao buscar perfil do prestador')));
   }
 
