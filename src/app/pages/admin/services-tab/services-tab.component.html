@@ -1,53 +1,55 @@
-<div class="flex justify-between items-center mb-6">
-  <h2 class="text-2xl font-semibold text-gray-800">Gerenciar Serviços</h2>
-  <button (click)="openServiceModal()" class="px-6 py-3 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition-all duration-300 shadow-md">+ Adicionar Serviço</button>
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+  <h2 class="text-lg sm:text-2xl font-semibold text-gray-800">Gerenciar Serviços</h2>
+  <button (click)="openServiceModal()" class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition-all duration-300 shadow-md text-sm sm:text-base">+ Adicionar Serviço</button>
 </div>
 
-<div *ngIf="error" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-xl text-center">{{ error }}</div>
+<div *ngIf="error" class="mb-4 p-3 sm:p-4 bg-red-100 border border-red-400 text-red-700 rounded-xl text-center text-sm">{{ error }}</div>
 
-<div class="overflow-x-auto">
-  <table class="w-full text-sm text-left text-gray-600 bg-white rounded-lg shadow-sm">
+<div class="overflow-x-auto -mx-3 sm:mx-0">
+  <table class="w-full text-xs sm:text-sm text-left text-gray-600 bg-white rounded-lg shadow-sm min-w-[500px]">
     <thead class="bg-gray-100">
       <tr>
-        <th class="px-6 py-3 font-semibold">Nome</th>
-        <th class="px-6 py-3 font-semibold">Duração (min)</th>
-        <th class="px-6 py-3 font-semibold">Preço (R$)</th>
-        <th class="px-6 py-3 font-semibold">Status</th>
-        <th class="px-6 py-3 font-semibold">Ações</th>
+        <th class="px-3 sm:px-6 py-2 sm:py-3 font-semibold">Nome</th>
+        <th class="px-3 sm:px-6 py-2 sm:py-3 font-semibold whitespace-nowrap">Duração</th>
+        <th class="px-3 sm:px-6 py-2 sm:py-3 font-semibold">Preço</th>
+        <th class="px-3 sm:px-6 py-2 sm:py-3 font-semibold">Status</th>
+        <th class="px-3 sm:px-6 py-2 sm:py-3 font-semibold">Ações</th>
       </tr>
     </thead>
     <tbody>
       <tr *ngFor="let srv of services; trackBy: trackById" class="border-b hover:bg-gray-50 transition-all duration-300">
-        <td class="px-6 py-4 font-medium text-gray-900">{{ srv.name }}</td>
-        <td class="px-6 py-4">{{ srv.duration }}</td>
-        <td class="px-6 py-4">{{ srv.price | currency:'BRL' }}</td>
-        <td class="px-6 py-4">
-          <span class="inline-block px-2 py-1 text-xs rounded-full" [ngClass]="srv.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+        <td class="px-3 sm:px-6 py-3 sm:py-4 font-medium text-gray-900">{{ srv.name }}</td>
+        <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">{{ srv.duration }} min</td>
+        <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">{{ srv.price | currency:'BRL' }}</td>
+        <td class="px-3 sm:px-6 py-3 sm:py-4">
+          <span class="inline-block px-2 py-1 text-[10px] sm:text-xs rounded-full" [ngClass]="srv.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
             {{ srv.active ? 'Ativo' : 'Inativo' }}
           </span>
         </td>
-        <td class="px-6 py-4">
-          <button (click)="toggleServiceActive(srv.id, srv.active)" class="mr-2 p-1 text-blue-500 hover:text-blue-600">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </button>
-          <button (click)="openServiceModal(srv.id)" class="mr-2 p-1 text-yellow-500 hover:text-yellow-600">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-            </svg>
-          </button>
-          <button (click)="deleteService(srv.id)" class="p-1 text-red-500 hover:text-red-600">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2.25 2.25 0 0116.138 21H7.862a2.25 2.25 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-            </svg>
-          </button>
+        <td class="px-3 sm:px-6 py-3 sm:py-4">
+          <div class="flex items-center space-x-1">
+            <button (click)="toggleServiceActive(srv.id, srv.active)" class="p-1 text-blue-500 hover:text-blue-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </button>
+            <button (click)="openServiceModal(srv.id)" class="p-1 text-yellow-500 hover:text-yellow-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+              </svg>
+            </button>
+            <button (click)="deleteService(srv.id)" class="p-1 text-red-500 hover:text-red-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2.25 2.25 0 0116.138 21H7.862a2.25 2.25 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </div>
         </td>
       </tr>
     </tbody>
   </table>
 </div>
 
-<p *ngIf="services.length === 0" class="text-center text-gray-500 py-8 text-lg">Nenhum serviço cadastrado. Adicione o primeiro!</p>
+<p *ngIf="services.length === 0" class="text-center text-gray-500 py-6 sm:py-8 text-sm sm:text-lg">Nenhum serviço cadastrado. Adicione o primeiro!</p>
 
 <app-service-modal *ngIf="showServiceModal" [serviceForm]="serviceForm" [editingId]="editingId" [submittedService]="submittedService" (save)="onSaveService($event)" (close)="showServiceModal = false"></app-service-modal>

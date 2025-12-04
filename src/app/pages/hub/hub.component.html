@@ -1,46 +1,56 @@
 <!-- hub.component.html - VERSÃO COM MODO VISITANTE -->
 <header class="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
-  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-    <div class="flex items-center space-x-4">
+  <div class="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-2 sm:space-x-4 min-w-0">
       <!-- Avatar/Ícone -->
-      <div *ngIf="isGuest" class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div *ngIf="isGuest" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
         </svg>
       </div>
-      <div *ngIf="!isGuest && user.avatar" class="w-10 h-10 rounded-full overflow-hidden">
+      <div *ngIf="!isGuest && user.avatar" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0">
         <img [src]="user.avatar" [alt]="user.name" class="w-full h-full object-cover">
       </div>
-      <div *ngIf="!isGuest && !user.avatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white font-bold">
+      <div *ngIf="!isGuest && !user.avatar" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white font-bold text-sm sm:text-base flex-shrink-0">
         {{ user.name?.charAt(0)?.toUpperCase() || 'U' }}
       </div>
       
       <!-- Info do usuário -->
-      <div>
-        <h1 class="font-bold text-gray-900 flex items-center gap-2">
+      <div class="min-w-0 hidden sm:block">
+        <h1 class="font-bold text-gray-900 flex items-center gap-2 text-sm sm:text-base truncate">
           {{ user.name }}
-          <span *ngIf="isGuest" class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">Visitante</span>
+          <span *ngIf="isGuest" class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full flex-shrink-0">Visitante</span>
         </h1>
-        <p class="text-sm text-gray-500">{{ user.email }}</p>
+        <p class="text-xs sm:text-sm text-gray-500 truncate">{{ user.email }}</p>
       </div>
     </div>
     
     <!-- Botões do header -->
-    <div class="flex space-x-2">
+    <div class="flex space-x-1 sm:space-x-2 flex-shrink-0">
       <!-- Visitante: Entrar / Criar Conta -->
       <ng-container *ngIf="isGuest">
-        <button (click)="goToLogin()" class="px-4 py-2 rounded-xl bg-pink-500 text-white hover:bg-pink-600 transition-colors font-medium">
+        <button (click)="goToLogin()" class="px-3 sm:px-4 py-2 rounded-xl bg-pink-500 text-white hover:bg-pink-600 transition-colors font-medium text-xs sm:text-sm">
           Entrar
         </button>
-        <button (click)="goToRegister()" class="px-4 py-2 rounded-xl bg-white border-2 border-pink-500 text-pink-600 hover:bg-pink-50 transition-colors font-medium">
+        <button (click)="goToRegister()" class="hidden xs:block px-3 sm:px-4 py-2 rounded-xl bg-white border-2 border-pink-500 text-pink-600 hover:bg-pink-50 transition-colors font-medium text-xs sm:text-sm">
           Criar Conta
         </button>
       </ng-container>
       
       <!-- Logado: Minha Conta / Sair -->
       <ng-container *ngIf="!isGuest">
-        <button (click)="goToAccount()" class="px-4 py-2 rounded-xl bg-pink-500 text-white hover:bg-pink-600 transition-colors">Minha Conta</button>
-        <button (click)="logout()" class="px-4 py-2 rounded-xl bg-gray-500 text-white hover:bg-gray-600 transition-colors">Sair</button>
+        <button (click)="goToAccount()" class="px-3 sm:px-4 py-2 rounded-xl bg-pink-500 text-white hover:bg-pink-600 transition-colors text-xs sm:text-sm">
+          <span class="hidden sm:inline">Minha Conta</span>
+          <svg class="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+        </button>
+        <button (click)="logout()" class="px-3 sm:px-4 py-2 rounded-xl bg-gray-500 text-white hover:bg-gray-600 transition-colors text-xs sm:text-sm">
+          <span class="hidden sm:inline">Sair</span>
+          <svg class="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+        </button>
       </ng-container>
     </div>
   </div>

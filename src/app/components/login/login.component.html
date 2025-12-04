@@ -13,20 +13,20 @@
 </div>
 
 <!-- Conteúdo principal, só aparece quando loading = false -->
-<div *ngIf="!initialLoading" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50">
-  <div class="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white transform hover:scale-[1.02] transition-all duration-300 border border-pink-100 overflow-visible flex flex-col justify-between"> <!-- Removido min-h, adicionado flex justify-between -->
+<div *ngIf="!initialLoading" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50 py-4 sm:py-8 px-3 sm:px-4">
+  <div class="w-full max-w-md p-4 sm:p-6 md:p-8 rounded-2xl shadow-xl bg-white transition-all duration-300 border border-pink-100 overflow-visible flex flex-col justify-between"> <!-- Removido min-h, adicionado flex justify-between -->
     <!-- Header com ícone -->
-    <div class="text-center mb-8 border-b border-pink-100 pb-6">
-      <div class="mx-auto w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="text-center mb-4 sm:mb-8 border-b border-pink-100 pb-4 sm:pb-6">
+      <div class="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-pink-500 rounded-full flex items-center justify-center mb-3 sm:mb-4 shadow-lg">
+        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
       </div>
-      <h2 class="text-2xl font-bold text-gray-900">VEA - Login</h2>
-      <p class="text-sm text-gray-500 mt-1">Acesse sua conta para continuar</p>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">VEA - Login</h2>
+      <p class="text-xs sm:text-sm text-gray-500 mt-1">Acesse sua conta para continuar</p>
     </div>
-    <div class="flex flex-col flex-1 justify-center space-y-6"> <!-- Wrapper pro form com flex-1 e justify-center pra centralizar verticalmente se curto -->
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+    <div class="flex flex-col flex-1 justify-center space-y-4 sm:space-y-6"> <!-- Wrapper pro form com flex-1 e justify-center pra centralizar verticalmente se curto -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4 sm:space-y-6">
         <!-- Campo de E-mail -->
         <div>
           <label for="email" class="block text-sm font-medium text-gray-700 mb-2">E-mail *</label>
