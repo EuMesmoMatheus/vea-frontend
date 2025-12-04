@@ -52,3 +52,12 @@
     transform: scale(1) translateY(0);
   }
 }
+
+/* Mobile filters fix - garante que inputs fiquem acima do overlay */
+@media (max-width: 768px) {
+  /* Força os inputs a serem interativos */
+  input, select, button {
+    position: relative;
+    z-index: 1;
+  }
+}

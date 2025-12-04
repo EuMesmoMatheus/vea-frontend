@@ -58,13 +58,14 @@
 
 <div class="pt-20 min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-50 flex">
 
+  <!-- Overlay móvel (fora da sidebar) -->
+  <div *ngIf="showFilters" class="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30" (click)="toggleFilters()"></div>
+
   <!-- Sidebar Filtros -->
   <div class="w-full md:w-80 bg-white shadow-lg border-r border-gray-200 h-[calc(100vh-5rem)] fixed md:static z-40 overflow-y-auto transition-transform duration-300"
        [class]="showFilters ? 'translate-x-0' : '-translate-x-full md:translate-x-0'">
-    
-    <div *ngIf="showFilters" class="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30" (click)="toggleFilters()"></div>
 
-    <div class="p-6 space-y-4 h-full flex flex-col">
+    <div class="p-6 space-y-4 h-full flex flex-col relative bg-white">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
           <svg class="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
