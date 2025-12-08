@@ -2,14 +2,29 @@ import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, Change
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { ApiService, Appointment } from '..//../../services/api.service';
+import { ApiService, Appointment } from '../../../services/api.service';
 import { ConfirmService } from '../../../services/confirm.service';
 import { ToastService } from '../../../services/toast.service';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 interface LocalAppointment extends Appointment {
-  dateTime: Date; // Extensão local para Date (mapeado do backend)
+  dateTime: Date;
+}
+
+interface Employee {
+  id: number;
+  name: string;
+  role?: string;
+  avatarUrl?: string;
+}
+
+interface DayMetrics {
+  totalAppointments: number;
+  totalRevenue: number;
+  topService: { name: string; count: number } | null;
+  topEmployee: { name: string; count: number } | null;
+  occupancyRate: number;
 }
 
 @Component({
@@ -21,24 +36,29 @@ interface LocalAppointment extends Appointment {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AgendaTabComponent implements OnInit, OnChanges {
-  @Input() companyId!: number; // Obrigatório: ID da empresa
-  @Input() operatingHours: string = '08:00-18:00'; // Horário de funcionamento (formato: HH:MM-HH:MM)
+  @Input() companyId!: number;
+  @Input() operatingHours: string = '08:00-18:00';
   @Output() apptCancelled = new EventEmitter<void>();
 
-  selectedView: 'week' | 'day' | 'month' = 'week'; // Adicionado 'month'
-  hours: string[] = []; // Gerado dinamicamente baseado no operatingHours
-  weekDays: { label: string; date: string; isToday: boolean; appointmentsCount: number }[] = [];
-  dayAppointments: LocalAppointment[] = [];
-  monthAppointments: LocalAppointment[] = []; // Novo: Para visão mensal
-  weekTitle = '';
-  monthTitle = ''; // Novo
-  todayDate = '';
+  // Data
   selectedDate = new Date();
-  allAppointments: LocalAppointment[] = []; // Unificado: Todos os appts carregados para o range
-  loading = false; // Indicador de load
+  hours: string[] = [];
+  employees: Employee[] = [];
+  allAppointments: LocalAppointment[] = [];
+  dayMetrics: DayMetrics = {
+    totalAppointments: 0,
+    totalRevenue: 0,
+    topService: null,
+    topEmployee: null,
+    occupancyRate: 0
+  };
+
+  // UI State
+  loading = false;
+  isToday = true;
 
   constructor(
-    private api: ApiService, 
+    private api: ApiService,
     private cdr: ChangeDetectorRef,
     private confirmService: ConfirmService,
     private toast: ToastService
@@ -47,7 +67,7 @@ export class AgendaTabComponent implements OnInit, OnChanges {
   ngOnInit(): void {
     this.generateHoursFromOperatingHours();
     if (this.companyId) {
-      this.onViewChange(); // Carrega inicial baseado na view default
+      this.loadData();
     }
   }
 
@@ -56,187 +76,245 @@ export class AgendaTabComponent implements OnInit, OnChanges {
       this.generateHoursFromOperatingHours();
     }
     if (changes['companyId'] && this.companyId) {
-      this.onViewChange(); // Recarrega se companyId mudar
+      this.loadData();
     }
   }
 
-  /**
-   * Gera array de horários baseado no operatingHours da empresa
-   */
   private generateHoursFromOperatingHours(): void {
     const [start, end] = this.operatingHours?.split('-') || ['08:00', '18:00'];
     const startHour = parseInt(start?.split(':')[0] || '8', 10);
     const endHour = parseInt(end?.split(':')[0] || '18', 10);
-    
+
     this.hours = [];
     for (let h = startHour; h <= endHour; h++) {
       this.hours.push(`${h.toString().padStart(2, '0')}:00`);
     }
   }
 
-  onViewChange(): void {
+  private loadData(): void {
     this.loading = true;
-    let start: string, end: string;
+    this.checkIsToday();
 
-    if (this.selectedView === 'week') {
-      const startOfWeek = new Date(this.selectedDate);
-      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-      start = startOfWeek.toISOString().split('T')[0];
-      end = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      this.buildWeekView();
-    } else if (this.selectedView === 'day') {
-      start = this.selectedDate.toISOString().split('T')[0];
-      end = start;
-      this.selectedDate = new Date(start); // Garante data limpa
-      this.updateDayView();
-    } else if (this.selectedView === 'month') {
-      const year = this.selectedDate.getFullYear();
-      const month = this.selectedDate.getMonth();
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      start = firstDay.toISOString().split('T')[0];
-      end = lastDay.toISOString().split('T')[0];
-      this.buildMonthView();
-    }
+    const dateStr = this.selectedDate.toISOString().split('T')[0];
 
-    // Carrega dados para o range
-    this.loadAppointments(start!, end!);
-  }
-
-  private loadAppointments(start: string, end: string): void {
-    this.api.getAppointmentsWeek({ start, end, companyId: this.companyId }).subscribe({
+    // Carregar funcionários e agendamentos em paralelo
+    this.api.getCompanyEmployees(this.companyId).subscribe({
       next: (res) => {
         if (res.success && res.data) {
-          this.allAppointments = res.data.map((a: Appointment) => ({
-            ...a,
-            dateTime: new Date(a.startDateTime),
-          })) as LocalAppointment[];
-          this.updateViews();
+          this.employees = res.data;
+        }
+        this.loadAppointments(dateStr);
+      },
+      error: () => {
+        this.employees = [];
+        this.loadAppointments(dateStr);
+      }
+    });
+  }
+
+  private loadAppointments(dateStr: string): void {
+    this.api.getAppointmentsWeek({ start: dateStr, end: dateStr, companyId: this.companyId }).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.allAppointments = res.data
+            .map((a: Appointment) => ({
+              ...a,
+              dateTime: new Date(a.startDateTime),
+            }))
+            .filter((a: LocalAppointment) => a.status !== 'Cancelled') as LocalAppointment[];
+          this.calculateMetrics();
         }
         this.loading = false;
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('Erro ao carregar agendamentos:', err);
+      error: () => {
+        this.allAppointments = [];
         this.loading = false;
         this.cdr.detectChanges();
       }
     });
   }
 
-  private updateViews(): void {
-    if (this.selectedView === 'week') {
-      // Removido: this.appointments = this.allAppointments; (não necessário, pois getter e funções usam allAppointments)
-      this.buildWeekView();
-    } else if (this.selectedView === 'day') {
-      this.dayAppointments = this.allAppointments.filter(appt => 
-        appt.dateTime.toDateString() === this.selectedDate.toDateString()
-      );
-    } else if (this.selectedView === 'month') {
-      this.monthAppointments = [...this.allAppointments].sort((a, b) => 
-        a.dateTime.getTime() - b.dateTime.getTime()
-      );
-    }
+  private calculateMetrics(): void {
+    const appointments = this.allAppointments;
+
+    // Total de agendamentos
+    this.dayMetrics.totalAppointments = appointments.length;
+
+    // Total faturado
+    this.dayMetrics.totalRevenue = appointments.reduce((sum, appt) => {
+      return sum + this.getServicePriceNumber(appt);
+    }, 0);
+
+    // Serviço mais utilizado
+    const serviceCount: { [key: string]: number } = {};
+    appointments.forEach(appt => {
+      const serviceName = this.getServiceName(appt);
+      serviceCount[serviceName] = (serviceCount[serviceName] || 0) + 1;
+    });
+    const topServiceEntry = Object.entries(serviceCount).sort((a, b) => b[1] - a[1])[0];
+    this.dayMetrics.topService = topServiceEntry ? { name: topServiceEntry[0], count: topServiceEntry[1] } : null;
+
+    // Funcionário mais ativo
+    const employeeCount: { [key: string]: number } = {};
+    appointments.forEach(appt => {
+      const empName = appt.employee?.name || 'N/A';
+      employeeCount[empName] = (employeeCount[empName] || 0) + 1;
+    });
+    const topEmpEntry = Object.entries(employeeCount).sort((a, b) => b[1] - a[1])[0];
+    this.dayMetrics.topEmployee = topEmpEntry ? { name: topEmpEntry[0], count: topEmpEntry[1] } : null;
+
+    // Taxa de ocupação (slots ocupados / total de slots possíveis)
+    const totalSlots = this.employees.length * this.hours.length;
+    const occupiedSlots = appointments.length;
+    this.dayMetrics.occupancyRate = totalSlots > 0 ? Math.round((occupiedSlots / totalSlots) * 100) : 0;
   }
 
-  private buildWeekView(): void {
-    const startOfWeek = new Date(this.selectedDate);
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-    this.weekDays = [];
-    this.weekTitle = `${startOfWeek.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} - ${new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}`;
-    this.todayDate = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' });
-    for (let i = 0; i < 7; i++) {
-      const dayDate = new Date(startOfWeek.getTime() + i * 24 * 60 * 60 * 1000);
-      const dateStr = dayDate.toISOString().split('T')[0];
-      const isToday = dayDate.toDateString() === new Date().toDateString();
-      const count = this.allAppointments.filter(appt => appt.dateTime.toISOString().split('T')[0] === dateStr).length;
-      this.weekDays.push({ label: dayDate.toLocaleDateString('pt-BR', { weekday: 'short' }), date: dateStr, isToday, appointmentsCount: count });
-    }
-  }
-
-  private buildMonthView(): void {
-    const year = this.selectedDate.getFullYear();
-    const month = this.selectedDate.getMonth();
-    this.monthTitle = new Date(year, month, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
-  }
-
-  private updateDayView(): void {
-    if (this.selectedView === 'day') {
-      this.dayAppointments = this.allAppointments.filter(appt => appt.dateTime.toDateString() === this.selectedDate.toDateString());
-    }
+  private checkIsToday(): void {
+    const today = new Date();
+    this.isToday = this.selectedDate.toDateString() === today.toDateString();
   }
 
   // Navegação
-  prevWeek(): void {
-    this.selectedDate.setDate(this.selectedDate.getDate() - 7);
-    this.onViewChange();
-  }
-  nextWeek(): void {
-    this.selectedDate.setDate(this.selectedDate.getDate() + 7);
-    this.onViewChange();
-  }
-  prevMonth(): void { // Novo
-    this.selectedDate.setMonth(this.selectedDate.getMonth() - 1);
-    this.onViewChange();
-  }
-  nextMonth(): void { // Novo
-    this.selectedDate.setMonth(this.selectedDate.getMonth() + 1);
-    this.onViewChange();
-  }
-  prevDay(): void { // Novo: Para consistência
-    this.selectedDate.setDate(this.selectedDate.getDate() - 1);
-    this.onViewChange();
-  }
-  nextDay(): void { // Novo
-    this.selectedDate.setDate(this.selectedDate.getDate() + 1);
-    this.onViewChange();
+  prevDay(): void {
+    this.selectedDate = new Date(this.selectedDate.getTime() - 24 * 60 * 60 * 1000);
+    this.loadData();
   }
 
-  getAppointmentsForDayHour(dateStr: string, hourStr: string): LocalAppointment[] {
-    const hour = parseInt(hourStr.split(':')[0], 10);
-    return this.allAppointments.filter(appt => {
-      const apptDateStr = appt.dateTime.toISOString().split('T')[0];
-      const apptHour = appt.dateTime.getHours();
-      return apptDateStr === dateStr && apptHour === hour;
+  nextDay(): void {
+    this.selectedDate = new Date(this.selectedDate.getTime() + 24 * 60 * 60 * 1000);
+    this.loadData();
+  }
+
+  goToToday(): void {
+    this.selectedDate = new Date();
+    this.loadData();
+  }
+
+  // Formatação de data
+  get formattedDate(): string {
+    return this.selectedDate.toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
     });
+  }
+
+  // Buscar agendamentos para um funcionário em um horário específico
+  getAppointmentForSlot(employeeId: number, hourStr: string): LocalAppointment | null {
+    const hour = parseInt(hourStr.split(':')[0], 10);
+    return this.allAppointments.find(appt => {
+      const apptHour = appt.dateTime.getHours();
+      return appt.employee?.id === employeeId && apptHour === hour;
+    }) || null;
+  }
+
+  // Verifica se um slot está ocupado por um agendamento que começou antes
+  isSlotOccupiedByPrevious(employeeId: number, hourStr: string): LocalAppointment | null {
+    const hour = parseInt(hourStr.split(':')[0], 10);
+    
+    return this.allAppointments.find(appt => {
+      if (appt.employee?.id !== employeeId) return false;
+      
+      const apptHour = appt.dateTime.getHours();
+      const duration = this.getServiceDuration(appt);
+      const endHour = apptHour + Math.ceil(duration / 60);
+      
+      return apptHour < hour && hour < endHour;
+    }) || null;
+  }
+
+  // Calcula quantos slots um agendamento ocupa
+  getSlotSpan(appt: LocalAppointment): number {
+    const duration = this.getServiceDuration(appt);
+    return Math.max(1, Math.ceil(duration / 60));
+  }
+
+  // Helper methods para serviços
+  getServiceName(appt: LocalAppointment): string {
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      return appt.services.map((s: any) => s.name).join(', ');
+    }
+    if (appt.service?.name) {
+      return appt.service.name;
+    }
+    return 'Serviço';
+  }
+
+  getServiceDuration(appt: LocalAppointment): number {
+    if (appt.totalDurationMinutes) {
+      return appt.totalDurationMinutes;
+    }
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      return appt.services.reduce((sum: number, s: any) => sum + (s.duration || 0), 0);
+    }
+    if (appt.service?.duration) {
+      return appt.service.duration;
+    }
+    return 60;
+  }
+
+  getServicePriceNumber(appt: LocalAppointment): number {
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      return appt.services.reduce((sum: number, s: any) => sum + (s.price || 0), 0);
+    }
+    if (appt.service?.price) {
+      return appt.service.price;
+    }
+    return 0;
+  }
+
+  getServicePrice(appt: LocalAppointment): string {
+    return this.getServicePriceNumber(appt).toFixed(2);
   }
 
   getStatusIcon(status: string): string {
     switch (status) {
       case 'Confirmed': return '✅';
-      case 'Scheduled': return '⏳'; // Novo: Para agendamentos novos
+      case 'Scheduled': return '🕐';
       case 'Cancelled': return '❌';
-      default: return '⏳';
+      default: return '🕐';
     }
   }
 
-  getStatusClass(status: string): { [key: string]: boolean } {
+  getStatusColor(status: string): string {
     switch (status) {
-      case 'Confirmed':
-      case 'Scheduled': return { 'bg-green-100 text-green-800': true };
-      case 'Cancelled': return { 'bg-red-100 text-red-800': true };
-      default: return { 'bg-gray-100 text-gray-800': true };
+      case 'Confirmed': return 'bg-emerald-100 border-emerald-300 text-emerald-800';
+      case 'Scheduled': return 'bg-amber-100 border-amber-300 text-amber-800';
+      case 'Cancelled': return 'bg-red-100 border-red-300 text-red-800';
+      default: return 'bg-gray-100 border-gray-300 text-gray-800';
     }
   }
 
-  async cancelAppointment(id: number): Promise<void> {
+  async cancelAppointment(appt: LocalAppointment, event: Event): Promise<void> {
+    event.stopPropagation();
+    
     const confirmed = await this.confirmService.danger(
       'Deseja cancelar este agendamento?',
       'Cancelar Agendamento'
     );
-    
+
     if (confirmed) {
-      this.api.cancelAppointment(id).subscribe({
+      this.api.cancelAppointment(appt.id).subscribe({
         next: (res) => {
           if (res.success) {
-            this.onViewChange();
+            this.loadData();
             this.apptCancelled.emit();
             this.toast.success('Agendamento cancelado! ✅');
           }
         },
-        error: () => this.toast.error('Erro ao cancelar agendamento. ❌')
+        error: () => this.toast.error('Erro ao cancelar. ❌')
       });
     }
+  }
+
+  canCancel(appt: LocalAppointment): boolean {
+    if (appt.status === 'Cancelled') return false;
+    const now = new Date();
+    const end = appt.endDateTime
+      ? new Date(appt.endDateTime)
+      : new Date(appt.dateTime.getTime() + this.getServiceDuration(appt) * 60000);
+    return end > now;
   }
 
   exportCalendar(): void {
@@ -244,34 +322,29 @@ export class AgendaTabComponent implements OnInit, OnChanges {
     if (element) {
       html2canvas(element).then((canvas) => {
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF();
+        const pdf = new jsPDF('landscape');
         const imgProps = pdf.getImageProperties(imgData);
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        const fileName = `agenda_${this.selectedView}_${new Date().toISOString().split('T')[0]}.pdf`;
+        const fileName = `agenda_${this.selectedDate.toISOString().split('T')[0]}.pdf`;
         pdf.save(fileName);
       });
     }
   }
 
-  /**
-   * Verifica se o agendamento já foi realizado (passou do horário de término)
-   */
-  isAlreadyDone(appt: LocalAppointment): boolean {
-    const now = new Date();
-    const end = appt.endDateTime
-      ? new Date(appt.endDateTime)
-      : new Date(appt.dateTime.getTime() + (appt.totalDurationMinutes || 60) * 60000);
-    return end < now;
+  // Iniciais do funcionário para avatar
+  getInitials(name: string): string {
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   }
 
-  /**
-   * Verifica se o agendamento pode ser cancelado
-   */
-  canCancel(appt: LocalAppointment): boolean {
-    return appt.status !== 'Cancelled' && !this.isAlreadyDone(appt);
+  // Cor do avatar baseada no nome
+  getAvatarColor(name: string): string {
+    const colors = [
+      'bg-pink-500', 'bg-purple-500', 'bg-indigo-500', 'bg-blue-500',
+      'bg-cyan-500', 'bg-teal-500', 'bg-emerald-500', 'bg-orange-500'
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
   }
-
-  // Removido: Getter 'appointments' (não mais necessário, pois HTML usa funções que acessam allAppointments diretamente)
 }
