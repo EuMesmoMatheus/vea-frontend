@@ -109,6 +109,26 @@ export class ReportsTabComponent implements OnInit, OnChanges {
             dateTime: new Date(a.startDateTime)
           })) as LocalAppointment[];
           
+          // Debug: verificar estrutura dos agendamentos
+          if (this.appointments.length > 0) {
+            console.log('📦 Primeiro agendamento (estrutura):', {
+              id: this.appointments[0].id,
+              services: this.appointments[0].services,
+              service: this.appointments[0].service,
+              totalPrice: (this.appointments[0] as any).totalPrice,
+              priceCalculated: this.getPrice(this.appointments[0])
+            });
+            
+            // Verificar se há serviços com preço
+            if (this.appointments[0].services && this.appointments[0].services.length > 0) {
+              console.log('📋 Serviços do primeiro agendamento:', this.appointments[0].services.map((s: any) => ({
+                name: s.name,
+                price: s.price,
+                priceType: typeof s.price
+              })));
+            }
+          }
+          
           this.calculateKPIs();
           this.calculateServiceRanking();
           this.calculateEmployeeRanking();
@@ -118,7 +138,8 @@ export class ReportsTabComponent implements OnInit, OnChanges {
         this.loading = false;
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
+        console.error('❌ Erro ao carregar agendamentos:', err);
         this.appointments = [];
         this.loading = false;
         this.cdr.detectChanges();
@@ -234,12 +255,51 @@ export class ReportsTabComponent implements OnInit, OnChanges {
   }
 
   private getPrice(appt: LocalAppointment): number {
+    // Helper para converter preço para número
+    const parsePrice = (price: any): number => {
+      if (price === null || price === undefined) return 0;
+      if (typeof price === 'number') return price;
+      if (typeof price === 'string') {
+        // Remove formatação brasileira (R$ 50,00 -> 50.00)
+        const cleaned = price.replace(/[R$\s]/g, '').replace(',', '.');
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? 0 : parsed;
+      }
+      return 0;
+    };
+    
+    // Prioridade 1: Array de serviços (múltiplos serviços)
     if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
-      return appt.services.reduce((sum: number, s: any) => sum + (s.price || 0), 0);
+      const total = appt.services.reduce((sum: number, s: any) => {
+        const price = parsePrice(s.price);
+        return sum + price;
+      }, 0);
+      return total;
     }
-    if (appt.service?.price) {
-      return appt.service.price;
+    
+    // Prioridade 2: Serviço único
+    if (appt.service) {
+      const price = parsePrice(appt.service.price);
+      if (price > 0) return price;
     }
+    
+    // Prioridade 3: Verificar se há totalPrice no agendamento (se a API retornar)
+    if ((appt as any).totalPrice !== undefined) {
+      return parsePrice((appt as any).totalPrice);
+    }
+    
+    // Prioridade 4: Verificar servicesJson (se for string JSON)
+    if (appt.servicesJson) {
+      try {
+        const services = JSON.parse(appt.servicesJson);
+        if (Array.isArray(services)) {
+          return services.reduce((sum: number, s: any) => sum + parsePrice(s.price), 0);
+        }
+      } catch (e) {
+        // Ignora erro de parse
+      }
+    }
+    
     return 0;
   }
 

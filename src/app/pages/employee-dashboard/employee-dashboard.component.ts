@@ -5,6 +5,13 @@ import { Router } from '@angular/router';
 import { ApiService, Employee, EmployeeAppointment, EmployeeAppointmentsResponse } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 
+interface DayAppointments {
+  date: string;
+  dateLabel: string;
+  dayLabel: string;
+  appointments: EmployeeAppointment[];
+}
+
 @Component({
   selector: 'app-employee-dashboard',
   standalone: true,
@@ -23,6 +30,11 @@ export class EmployeeDashboardComponent implements OnInit {
   // Dados de agendamentos
   appointmentsData: EmployeeAppointmentsResponse | null = null;
   appointments: EmployeeAppointment[] = [];
+  dayAppointments: DayAppointments[] = []; // Para visualização semanal
+  
+  // Horários de trabalho
+  operatingHours: { start: string; end: string } = { start: '08:00', end: '18:00' };
+  hours: string[] = [];
   
   // Controle de expansão dos cards
   expandedAppointments: Set<number> = new Set();
@@ -42,7 +54,7 @@ export class EmployeeDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadProfile();
-    this.loadAppointments();
+    this.generateHours();
   }
 
   // ==================== PERFIL ====================
@@ -50,22 +62,16 @@ export class EmployeeDashboardComponent implements OnInit {
     console.log('[EmployeeDashboard] Carregando perfil...');
     this.api.getEmployeeProfile().subscribe({
       next: (res) => {
-        console.log('[EmployeeDashboard] Resposta do perfil:', res);
-        console.log('[EmployeeDashboard] res.success:', res.success);
-        console.log('[EmployeeDashboard] res.data:', res.data);
-        
-        // Tenta extrair dados de diferentes estruturas de resposta
         if (res.success && res.data) {
           this.employee = res.data;
-          console.log('[EmployeeDashboard] Employee setado:', this.employee);
+          // Tentar buscar horário de funcionamento da empresa
+          this.loadCompanyOperatingHours();
         } else if (res && !res.success && (res as any).id) {
-          // Caso o backend retorne o objeto direto sem wrapper
           this.employee = res as any;
-          console.log('[EmployeeDashboard] Employee setado (sem wrapper):', this.employee);
-        } else {
-          console.warn('[EmployeeDashboard] Estrutura de resposta inesperada:', res);
+          this.loadCompanyOperatingHours();
         }
         this.loading = false;
+        this.loadAppointments();
       },
       error: (err) => {
         console.error('[EmployeeDashboard] Erro ao carregar perfil:', err);
@@ -73,6 +79,41 @@ export class EmployeeDashboardComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  private loadCompanyOperatingHours(): void {
+    // Se o employee tiver companyId, buscar horários
+    if (this.employee && (this.employee as any).companyId) {
+      this.api.getCompany((this.employee as any).companyId).subscribe({
+        next: (res) => {
+          if (res.success && res.data?.operatingHours) {
+            const [start, end] = res.data.operatingHours.split('-');
+            this.operatingHours = {
+              start: start?.trim() || '08:00',
+              end: end?.trim() || '18:00'
+            };
+            this.generateHours();
+          }
+        },
+        error: () => {
+          // Usa horário padrão
+          this.operatingHours = { start: '08:00', end: '18:00' };
+          this.generateHours();
+        }
+      });
+    } else {
+      this.generateHours();
+    }
+  }
+
+  private generateHours(): void {
+    const [startHour, startMin] = this.operatingHours.start.split(':').map(Number);
+    const [endHour, endMin] = this.operatingHours.end.split(':').map(Number);
+    
+    this.hours = [];
+    for (let h = startHour; h <= endHour; h++) {
+      this.hours.push(`${h.toString().padStart(2, '0')}:00`);
+    }
   }
 
   toggleProfile(): void {
@@ -92,7 +133,9 @@ export class EmployeeDashboardComponent implements OnInit {
         break;
         
       case 'week':
-        const weekDate = this.selectedDate.toISOString().split('T')[0];
+        // Corrigir: usar formato correto de data
+        const weekStart = this.getWeekStart(this.selectedDate);
+        const weekDate = this.formatDateForAPI(weekStart);
         this.api.getEmployeeAppointmentsWeek(weekDate).subscribe({
           next: (res) => this.handleAppointmentsResponse(res),
           error: () => this.handleAppointmentsError()
@@ -114,16 +157,47 @@ export class EmployeeDashboardComponent implements OnInit {
     if (res.success && res.data) {
       this.appointmentsData = res.data;
       this.appointments = res.data.appointments || [];
+      
+      // Para visualização semanal, organizar por dia
+      if (this.activeView === 'week') {
+        this.organizeWeekAppointments();
+      }
     } else {
       this.appointments = [];
       this.appointmentsData = null;
+      this.dayAppointments = [];
     }
     this.loadingAppointments = false;
+  }
+
+  private organizeWeekAppointments(): void {
+    const weekStart = this.getWeekStart(this.selectedDate);
+    this.dayAppointments = [];
+    
+    for (let i = 0; i < 7; i++) {
+      const dayDate = new Date(weekStart);
+      dayDate.setDate(dayDate.getDate() + i);
+      
+      const dateStr = this.formatDateForAPI(dayDate);
+      const dayAppts = this.appointments.filter(apt => {
+        const aptDate = new Date(apt.startDateTime);
+        const aptDateStr = this.formatDateForAPI(aptDate);
+        return aptDateStr === dateStr;
+      });
+      
+      this.dayAppointments.push({
+        date: dateStr,
+        dateLabel: dayDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }),
+        dayLabel: dayDate.toLocaleDateString('pt-BR', { weekday: 'short' }),
+        appointments: dayAppts
+      });
+    }
   }
 
   private handleAppointmentsError(): void {
     this.toast.error('Erro ao carregar agendamentos');
     this.appointments = [];
+    this.dayAppointments = [];
     this.loadingAppointments = false;
   }
 
@@ -137,38 +211,109 @@ export class EmployeeDashboardComponent implements OnInit {
   // ==================== NAVEGAÇÃO DE PERÍODO ====================
   prevPeriod(): void {
     if (this.activeView === 'week') {
-      this.selectedDate.setDate(this.selectedDate.getDate() - 7);
+      this.selectedDate = new Date(this.selectedDate.getTime() - 7 * 24 * 60 * 60 * 1000);
     } else if (this.activeView === 'month') {
-      this.selectedDate.setMonth(this.selectedDate.getMonth() - 1);
+      this.selectedDate = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth() - 1, 1);
     }
-    this.selectedDate = new Date(this.selectedDate);
     this.loadAppointments();
   }
 
   nextPeriod(): void {
     if (this.activeView === 'week') {
-      this.selectedDate.setDate(this.selectedDate.getDate() + 7);
+      this.selectedDate = new Date(this.selectedDate.getTime() + 7 * 24 * 60 * 60 * 1000);
     } else if (this.activeView === 'month') {
-      this.selectedDate.setMonth(this.selectedDate.getMonth() + 1);
+      this.selectedDate = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth() + 1, 1);
     }
-    this.selectedDate = new Date(this.selectedDate);
     this.loadAppointments();
   }
 
   getPeriodLabel(): string {
     if (this.activeView === 'today') {
       return this.selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-    } else if (this.activeView === 'week' && this.appointmentsData) {
-      return `${this.formatDate(this.appointmentsData.startDate)} - ${this.formatDate(this.appointmentsData.endDate)}`;
+    } else if (this.activeView === 'week') {
+      const weekStart = this.getWeekStart(this.selectedDate);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      return `${weekStart.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}`;
     } else if (this.activeView === 'month') {
       return this.selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     }
     return '';
   }
 
-  private formatDate(dateStr: string): string {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+  private getWeekStart(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day; // Domingo = 0
+    return new Date(d.setDate(diff));
+  }
+
+  private formatDateForAPI(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // ==================== GRADE DE HORÁRIOS ====================
+  /**
+   * Retorna o agendamento que começa neste horário específico
+   * (não retorna se só está ocupando por ter começado antes)
+   */
+  getAppointmentForSlot(hourStr: string, appointments: EmployeeAppointment[]): EmployeeAppointment | null {
+    const hour = parseInt(hourStr.split(':')[0], 10);
+    return appointments.find(appt => {
+      const apptDate = new Date(appt.startDateTime);
+      const apptHour = apptDate.getHours();
+      const apptMinutes = apptDate.getMinutes();
+      
+      // Agendamento que começa exatamente neste horário (ou nos primeiros minutos)
+      return apptHour === hour && apptMinutes < 30;
+    }) || null;
+  }
+
+  /**
+   * Verifica se um slot está ocupado por um agendamento que começou antes
+   * Retorna o agendamento se ele está ocupando este slot mas não começou nele
+   */
+  isSlotOccupiedByPrevious(hourStr: string, appointments: EmployeeAppointment[]): EmployeeAppointment | null {
+    const hour = parseInt(hourStr.split(':')[0], 10);
+    return appointments.find(appt => {
+      const apptDate = new Date(appt.startDateTime);
+      const apptHour = apptDate.getHours();
+      const apptMinutes = apptDate.getMinutes();
+      
+      // Se começou neste horário (ou depois), não é "previous"
+      if (apptHour > hour || (apptHour === hour && apptMinutes >= 30)) {
+        return false;
+      }
+      
+      // Calcular quando termina baseado na duração total
+      const duration = this.getServiceDuration(appt);
+      const endTime = new Date(apptDate.getTime() + duration * 60000);
+      const endHour = endTime.getHours();
+      const endMinutes = endTime.getMinutes();
+      
+      // Verifica se o agendamento ainda está ocupando este slot
+      // Se termina depois deste horário, está ocupando
+      if (endHour > hour) {
+        return true;
+      }
+      // Se termina neste horário mas ainda tem minutos, está ocupando
+      if (endHour === hour && endMinutes > 0) {
+        return true;
+      }
+      
+      return false;
+    }) || null;
+  }
+
+  /**
+   * Calcula quantos slots (horas) um agendamento ocupa
+   */
+  getSlotSpan(appt: EmployeeAppointment): number {
+    const duration = this.getServiceDuration(appt);
+    return Math.max(1, Math.ceil(duration / 60));
   }
 
   // ==================== EXPANSÃO DOS CARDS ====================
@@ -229,6 +374,14 @@ export class EmployeeDashboardComponent implements OnInit {
     return services.reduce((sum, s) => sum + (s.price || 0), 0);
   }
 
+  getServiceDuration(appt: EmployeeAppointment): number {
+    return appt.totalDurationMinutes || appt.services.reduce((sum, s) => sum + (s.duration || 0), 0);
+  }
+
+  trackByAppointmentId(index: number, appt: EmployeeAppointment): number {
+    return appt.id;
+  }
+
   // ==================== AÇÕES ====================
   logout(): void {
     localStorage.removeItem('token');
@@ -240,5 +393,3 @@ export class EmployeeDashboardComponent implements OnInit {
     this.router.navigate(['/hub']);
   }
 }
-
-

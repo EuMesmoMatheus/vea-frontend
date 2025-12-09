@@ -162,8 +162,157 @@
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-500"></div>
     </div>
 
-    <!-- Lista de Agendamentos -->
-    <div *ngIf="!loadingAppointments" class="space-y-4">
+    <!-- Visualização em Grade (Hoje e Semana) -->
+    <div *ngIf="!loadingAppointments && (activeView === 'today' || activeView === 'week')" class="space-y-4">
+      
+      <!-- Grade para Hoje -->
+      <div *ngIf="activeView === 'today'" class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4">
+          <h3 class="text-lg font-semibold">Agenda de Hoje</h3>
+          <p class="text-sm opacity-90">{{ getPeriodLabel() }}</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[400px]">
+            <thead>
+              <tr class="bg-gray-50 border-b border-gray-200">
+                <th class="w-20 p-3 text-left text-sm font-semibold text-gray-600">Horário</th>
+                <th class="p-3 text-left text-sm font-semibold text-gray-600">Agendamento</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let hour of hours" class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                <td class="p-3 text-sm font-medium text-gray-500 bg-gray-50/80 border-r border-gray-200">
+                  {{ hour }}
+                </td>
+                <td class="p-2">
+                  <ng-container *ngIf="getAppointmentForSlot(hour, appointments) as appt">
+                    <div (click)="toggleExpand(appt.id)" 
+                      [class]="'relative p-3 rounded-lg border-l-4 shadow-sm cursor-pointer group transition-all hover:shadow-md ' + getStatusClass(appt.status)"
+                      [style.height]="getSlotSpan(appt) > 1 ? (getSlotSpan(appt) * 70 + 'px') : 'auto'">
+                      <div class="space-y-1">
+                        <div class="font-semibold text-sm flex items-center justify-between">
+                          <span class="truncate">{{ appt.clientName }}</span>
+                          <span *ngIf="getSlotSpan(appt) > 1" class="ml-2 text-[10px] px-1.5 py-0.5 bg-white/50 rounded-full">
+                            {{ getSlotSpan(appt) }}h
+                          </span>
+                        </div>
+                        <div class="text-xs opacity-80">
+                          <span *ngIf="appt.services.length > 1" class="font-medium">{{ appt.services.length }} serviços</span>
+                          <span *ngIf="appt.services.length === 1">{{ appt.services[0].name }}</span>
+                          <span> • {{ getServiceDuration(appt) }}min</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                          <span class="font-medium">R$ {{ getTotalPrice(appt.services).toFixed(2) }}</span>
+                          <span>{{ getStatusIcon(appt.status) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </ng-container>
+                  <ng-container *ngIf="!getAppointmentForSlot(hour, appointments) && isSlotOccupiedByPrevious(hour, appointments) as prevAppt">
+                    <div (click)="toggleExpand(prevAppt.id)"
+                      class="h-full bg-gray-100 rounded-lg border-l-4 border-gray-300 opacity-70 flex items-center justify-center p-2 cursor-pointer hover:opacity-90 transition-opacity">
+                      <div class="text-center">
+                        <span class="text-[10px] text-gray-500 block">↑</span>
+                        <span class="text-[9px] text-gray-400 truncate max-w-[80px] block">{{ prevAppt.clientName }}</span>
+                      </div>
+                    </div>
+                  </ng-container>
+                  <div *ngIf="!getAppointmentForSlot(hour, appointments) && !isSlotOccupiedByPrevious(hour, appointments)"
+                    class="rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center p-2">
+                    <span class="text-xs text-gray-300">—</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Grade para Semana -->
+      <div *ngIf="activeView === 'week'" class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4">
+          <h3 class="text-lg font-semibold">Agenda Semanal</h3>
+          <p class="text-sm opacity-90">{{ getPeriodLabel() }}</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[800px]">
+            <thead>
+              <tr class="bg-gray-50 border-b border-gray-200">
+                <th class="w-20 p-3 text-left text-xs sm:text-sm font-semibold text-gray-600 sticky left-0 bg-gray-50 z-10">Horário</th>
+                <th *ngFor="let day of dayAppointments" class="p-3 text-center min-w-[140px]">
+                  <div class="flex flex-col items-center gap-1">
+                    <span class="text-xs sm:text-sm font-medium text-gray-700">{{ day.dayLabel }}</span>
+                    <span class="text-[10px] text-gray-500">{{ day.dateLabel }}</span>
+                    <span *ngIf="day.appointments.length > 0" class="text-[10px] px-2 py-0.5 bg-pink-100 text-pink-600 rounded-full">
+                      {{ day.appointments.length }}
+                    </span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let hour of hours" class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                <td class="p-2 sm:p-3 text-xs sm:text-sm font-medium text-gray-500 bg-gray-50/80 sticky left-0 z-10 border-r border-gray-200">
+                  {{ hour }}
+                </td>
+                <td *ngFor="let day of dayAppointments" class="p-1.5 sm:p-2 align-top border-r border-gray-100 last:border-r-0 h-[70px] sm:h-[80px]">
+                  <ng-container *ngIf="getAppointmentForSlot(hour, day.appointments) as appt">
+                    <div (click)="toggleExpand(appt.id)"
+                      [class]="'relative p-2 rounded-lg border-l-4 shadow-sm h-full cursor-pointer group transition-all hover:shadow-md ' + getStatusClass(appt.status)"
+                      [style.height]="getSlotSpan(appt) > 1 ? (getSlotSpan(appt) * 70 + 'px') : 'auto'">
+                      <div class="space-y-0.5">
+                        <div class="font-semibold text-[11px] sm:text-xs flex items-center justify-between">
+                          <span class="truncate">{{ appt.clientName }}</span>
+                          <span *ngIf="getSlotSpan(appt) > 1" class="ml-1 text-[9px] px-1 bg-white/50 rounded">
+                            {{ getSlotSpan(appt) }}h
+                          </span>
+                        </div>
+                        <div class="text-[10px] sm:text-[11px] opacity-80">
+                          <span *ngIf="appt.services.length > 1" class="font-medium">{{ appt.services.length }} serv.</span>
+                          <span *ngIf="appt.services.length === 1" class="truncate block">{{ appt.services[0].name }}</span>
+                          <span> • {{ getServiceDuration(appt) }}min</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] sm:text-[11px]">
+                          <span class="font-medium">R$ {{ getTotalPrice(appt.services).toFixed(0) }}</span>
+                          <span>{{ getStatusIcon(appt.status) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </ng-container>
+                  <ng-container *ngIf="!getAppointmentForSlot(hour, day.appointments) && isSlotOccupiedByPrevious(hour, day.appointments) as prevAppt">
+                    <div (click)="toggleExpand(prevAppt.id)"
+                      class="h-full bg-gray-100 rounded-lg border-l-4 border-gray-300 opacity-70 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
+                      <div class="text-center">
+                        <span class="text-[10px] text-gray-500 block">↑</span>
+                        <span class="text-[9px] text-gray-400 truncate max-w-[100px] block px-1">{{ prevAppt.clientName }}</span>
+                      </div>
+                    </div>
+                  </ng-container>
+                  <div *ngIf="!getAppointmentForSlot(hour, day.appointments) && !isSlotOccupiedByPrevious(hour, day.appointments)"
+                    class="h-full rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
+                    <span class="text-[10px] text-gray-300">—</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="appointments.length === 0" class="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-100">
+        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-pink-100 flex items-center justify-center">
+          <svg class="w-10 h-10 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Nenhum agendamento</h3>
+        <p class="text-gray-500">Você não tem agendamentos para este período.</p>
+      </div>
+    </div>
+
+    <!-- Lista de Agendamentos (Mês) -->
+    <div *ngIf="!loadingAppointments && activeView === 'month'" class="space-y-4">
       
       <!-- Empty State -->
       <div *ngIf="appointments.length === 0" class="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-100">

@@ -127,20 +127,53 @@ export class AccountComponent implements OnInit {
   goToLogin(): void { this.router.navigate(['/login']); }
 
   async cancelAppointment(id: number): Promise<void> {
-    const confirmed = await this.confirmService.danger(
-      'Tem certeza que deseja cancelar este agendamento?',
-      'Cancelar Agendamento'
-    );
-    
-    if (confirmed) {
-      this.api.cancelAppointment(id).subscribe({
-        next: () => {
-          this.loadAppointments();
-          this.selectedAppointment = null;
-          this.toast.success('Agendamento cancelado com sucesso! ✅');
-        },
-        error: () => this.toast.error('Erro ao cancelar agendamento. ❌')
+    try {
+      const confirmed = await this.confirmService.confirm({
+        title: 'Cancelar Agendamento',
+        message: 'Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.',
+        confirmText: 'Sim, cancelar',
+        cancelText: 'Não',
+        type: 'danger'
       });
+      
+      if (!confirmed) {
+        return; // Usuário cancelou a confirmação
+      }
+      
+      this.api.cancelAppointment(id).subscribe({
+        next: (response) => {
+          if (response && response.success !== false) {
+            this.loadAppointments();
+            this.selectedAppointment = null;
+            this.toast.success('Agendamento cancelado com sucesso! ✅');
+          } else {
+            const errorMsg = response?.message || 'Não foi possível cancelar o agendamento.';
+            this.toast.error(errorMsg);
+            console.error('Erro na resposta:', response);
+          }
+        },
+        error: (err) => {
+          console.error('Erro ao cancelar agendamento:', err);
+          let errorMessage = 'Erro ao cancelar agendamento.';
+          
+          if (err?.error?.message) {
+            errorMessage = err.error.message;
+          } else if (err?.message) {
+            errorMessage = err.message;
+          } else if (err?.status === 401) {
+            errorMessage = 'Você não tem permissão para cancelar este agendamento.';
+          } else if (err?.status === 404) {
+            errorMessage = 'Agendamento não encontrado.';
+          } else if (err?.status >= 500) {
+            errorMessage = 'Erro interno do servidor. Tente novamente mais tarde.';
+          }
+          
+          this.toast.error(errorMessage);
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao exibir confirmação:', error);
+      this.toast.error('Erro ao processar cancelamento. Tente novamente. ❌');
     }
   }
 

@@ -95,17 +95,31 @@ export class AgendaTabComponent implements OnInit, OnChanges {
     this.loading = true;
     this.checkIsToday();
 
-    const dateStr = this.selectedDate.toISOString().split('T')[0];
+    // Formata data no formato YYYY-MM-DD (sem timezone issues)
+    const year = this.selectedDate.getFullYear();
+    const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(this.selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    console.log('📅 Data selecionada:', {
+      original: this.selectedDate,
+      formatted: dateStr,
+      companyId: this.companyId
+    });
 
     // Carregar funcionários e agendamentos em paralelo
     this.api.getEmployees(this.companyId).subscribe({
       next: (res: any) => {
         if (res.success && res.data) {
           this.employees = res.data;
+          console.log('👥 Funcionários carregados:', this.employees.length, this.employees);
+        } else {
+          console.warn('⚠️ Erro ao carregar funcionários:', res);
         }
         this.loadAppointments(dateStr);
       },
-      error: () => {
+      error: (err) => {
+        console.error('❌ Erro ao carregar funcionários:', err);
         this.employees = [];
         this.loadAppointments(dateStr);
       }
@@ -113,34 +127,76 @@ export class AgendaTabComponent implements OnInit, OnChanges {
   }
 
   private loadAppointments(dateStr: string): void {
+    console.log('🔍 Buscando agendamentos:', { start: dateStr, end: dateStr, companyId: this.companyId });
+    
     this.api.getAppointmentsWeek({ start: dateStr, end: dateStr, companyId: this.companyId }).subscribe({
       next: (res) => {
-        if (res.success && res.data) {
-          this.allAppointments = res.data
-            .map((a: Appointment) => ({
+        console.log('📦 Resposta completa da API:', JSON.stringify(res, null, 2));
+        
+        if (res.success) {
+          if (res.data && Array.isArray(res.data)) {
+            console.log('✅ Dados recebidos:', res.data.length, 'agendamentos');
+            
+            // Mapear e filtrar agendamentos
+            const mapped = res.data.map((a: Appointment) => ({
               ...a,
               dateTime: new Date(a.startDateTime),
-            }))
-            .filter((a: LocalAppointment) => a.status !== 'Cancelled') as LocalAppointment[];
-          
-          // Debug: verificar dados carregados
-          console.log('Agendamentos carregados:', this.allAppointments.length);
-          console.log('Funcionários:', this.employees.length);
-          if (this.allAppointments.length > 0) {
-            console.log('Primeiro agendamento:', {
-              employee: this.allAppointments[0].employee,
-              dateTime: this.allAppointments[0].dateTime,
-              hour: this.allAppointments[0].dateTime.getHours()
-            });
+            }));
+            
+            console.log('📋 Agendamentos mapeados:', mapped.length);
+            console.log('📋 Exemplo de agendamento:', mapped[0]);
+            
+            // Filtrar apenas do dia selecionado e não cancelados
+            this.allAppointments = mapped.filter((a: LocalAppointment) => {
+              const apptDateStr = a.dateTime.toISOString().split('T')[0];
+              const isSameDay = apptDateStr === dateStr;
+              const isNotCancelled = a.status !== 'Cancelled';
+              
+              if (!isSameDay) {
+                console.log('⏭️ Agendamento ignorado (dia diferente):', {
+                  apptDate: apptDateStr,
+                  selectedDate: dateStr,
+                  appointment: a
+                });
+              }
+              if (!isNotCancelled) {
+                console.log('⏭️ Agendamento ignorado (cancelado):', a);
+              }
+              
+              return isSameDay && isNotCancelled;
+            }) as LocalAppointment[];
+            
+            // Debug: verificar dados carregados
+            console.log('📊 Agendamentos finais (após filtros):', this.allAppointments.length);
+            
+            if (this.allAppointments.length > 0) {
+              console.log('📝 Primeiro agendamento:', {
+                id: this.allAppointments[0].id,
+                employee: this.allAppointments[0].employee,
+                employeeId: this.allAppointments[0].employee?.id,
+                dateTime: this.allAppointments[0].dateTime,
+                hour: this.allAppointments[0].dateTime.getHours(),
+                status: this.allAppointments[0].status
+              });
+            } else {
+              console.warn('⚠️ Nenhum agendamento encontrado para o dia:', dateStr);
+              if (res.data && res.data.length > 0) {
+                console.log('🔍 Todos os agendamentos recebidos:', res.data);
+              }
+            }
+          } else {
+            console.warn('⚠️ res.data não é um array:', res.data);
           }
           
           this.calculateMetrics();
+        } else {
+          console.warn('⚠️ Resposta sem sucesso:', { success: res.success, message: res.message });
         }
         this.loading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Erro ao carregar agendamentos:', err);
+        console.error('❌ Erro ao carregar agendamentos:', err);
         this.allAppointments = [];
         this.loading = false;
         this.cdr.detectChanges();
