@@ -151,6 +151,19 @@
     </div>
   </div>
 
+  <!-- Debug: Lista de agendamentos (temporário) -->
+  <div *ngIf="!loading && allAppointments.length > 0" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
+    <h3 class="text-sm font-semibold text-yellow-800 mb-2">🔍 Debug - Agendamentos do dia ({{ allAppointments.length }})</h3>
+    <div class="space-y-2 text-xs">
+      <div *ngFor="let appt of allAppointments" class="bg-white p-2 rounded border">
+        <strong>{{ getServiceName(appt) }}</strong> - 
+        Funcionário: {{ appt.employee?.name || 'N/A' }} (ID: {{ appt.employee?.id || 'N/A' }}) - 
+        Horário: {{ appt.dateTime | date:'HH:mm' }} - 
+        Status: {{ appt.status }}
+      </div>
+    </div>
+  </div>
+
   <!-- Cards de métricas -->
   <div *ngIf="!loading && employees.length > 0" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
     <!-- Total de agendamentos -->

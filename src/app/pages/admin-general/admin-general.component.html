@@ -88,7 +88,7 @@
     <app-services-tab *ngSwitchCase="tabs.Services" [services]="services" (serviceSaved)="onServiceSaved($event)" (serviceDeleted)="onServiceDeleted($event)"></app-services-tab>
     <app-employees-tab *ngSwitchCase="tabs.Employees" [employees]="employees" [roles]="roles" (employeeSaved)="onEmployeeSaved($event)" (roleSaved)="onRoleSaved($event)"></app-employees-tab>
     <app-company-tab *ngSwitchCase="tabs.Company" [companyForm]="companyForm" [businessTypes]="businessTypes" [companyId]="companyId" (companyUpdated)="onCompanyUpdated()"></app-company-tab>
-    <app-reports-tab *ngSwitchCase="tabs.Reports" [serviceReports]="serviceReports"></app-reports-tab>
+    <app-reports-tab *ngSwitchCase="tabs.Reports" [companyId]="companyId"></app-reports-tab>
     <div *ngSwitchDefault class="text-center text-gray-500 py-12">Selecione uma aba acima para continuar.</div>
   </div>
 </div>

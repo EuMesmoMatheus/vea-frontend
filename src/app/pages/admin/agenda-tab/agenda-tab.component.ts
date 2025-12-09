@@ -98,8 +98,8 @@ export class AgendaTabComponent implements OnInit, OnChanges {
     const dateStr = this.selectedDate.toISOString().split('T')[0];
 
     // Carregar funcionários e agendamentos em paralelo
-    this.api.getCompanyEmployees(this.companyId).subscribe({
-      next: (res) => {
+    this.api.getEmployees(this.companyId).subscribe({
+      next: (res: any) => {
         if (res.success && res.data) {
           this.employees = res.data;
         }
@@ -122,12 +122,25 @@ export class AgendaTabComponent implements OnInit, OnChanges {
               dateTime: new Date(a.startDateTime),
             }))
             .filter((a: LocalAppointment) => a.status !== 'Cancelled') as LocalAppointment[];
+          
+          // Debug: verificar dados carregados
+          console.log('Agendamentos carregados:', this.allAppointments.length);
+          console.log('Funcionários:', this.employees.length);
+          if (this.allAppointments.length > 0) {
+            console.log('Primeiro agendamento:', {
+              employee: this.allAppointments[0].employee,
+              dateTime: this.allAppointments[0].dateTime,
+              hour: this.allAppointments[0].dateTime.getHours()
+            });
+          }
+          
           this.calculateMetrics();
         }
         this.loading = false;
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
+        console.error('Erro ao carregar agendamentos:', err);
         this.allAppointments = [];
         this.loading = false;
         this.cdr.detectChanges();
@@ -203,24 +216,68 @@ export class AgendaTabComponent implements OnInit, OnChanges {
   // Buscar agendamentos para um funcionário em um horário específico
   getAppointmentForSlot(employeeId: number, hourStr: string): LocalAppointment | null {
     const hour = parseInt(hourStr.split(':')[0], 10);
+    const selectedDateStr = this.selectedDate.toISOString().split('T')[0];
+    
+    // Encontra o funcionário para comparar por ID ou nome
+    const employee = this.employees.find(e => e.id === employeeId);
+    
     return this.allAppointments.find(appt => {
+      // Verifica se é do dia selecionado
+      const apptDateStr = appt.dateTime.toISOString().split('T')[0];
+      if (apptDateStr !== selectedDateStr) return false;
+      
+      // Verifica se o agendamento é do funcionário correto (por ID ou nome como fallback)
+      const empMatch = appt.employee?.id === employeeId || 
+                      (employee && appt.employee?.name === employee.name);
+      if (!empMatch) return false;
+      
+      // Verifica se o horário do agendamento corresponde ao slot
       const apptHour = appt.dateTime.getHours();
-      return appt.employee?.id === employeeId && apptHour === hour;
+      
+      // Agendamento que começa neste horário
+      if (apptHour === hour) {
+        return true;
+      }
+      
+      // Agendamento que começou antes e ainda está ocupando este slot
+      if (apptHour < hour) {
+        const duration = this.getServiceDuration(appt);
+        const endTime = new Date(appt.dateTime.getTime() + duration * 60000);
+        const endHour = endTime.getHours();
+        // Se o agendamento termina depois deste horário, ele ocupa este slot
+        return endHour > hour || (endHour === hour && endTime.getMinutes() > 0);
+      }
+      
+      return false;
     }) || null;
   }
 
   // Verifica se um slot está ocupado por um agendamento que começou antes
   isSlotOccupiedByPrevious(employeeId: number, hourStr: string): LocalAppointment | null {
     const hour = parseInt(hourStr.split(':')[0], 10);
+    const selectedDateStr = this.selectedDate.toISOString().split('T')[0];
     
     return this.allAppointments.find(appt => {
+      // Verifica se é do dia selecionado
+      const apptDateStr = appt.dateTime.toISOString().split('T')[0];
+      if (apptDateStr !== selectedDateStr) return false;
+      
+      // Verifica se é do funcionário correto
       if (appt.employee?.id !== employeeId) return false;
       
       const apptHour = appt.dateTime.getHours();
-      const duration = this.getServiceDuration(appt);
-      const endHour = apptHour + Math.ceil(duration / 60);
       
-      return apptHour < hour && hour < endHour;
+      // Só mostra como "continuação" se o agendamento começou ANTES deste horário
+      // e ainda está ocupando este slot (mas não começou neste horário)
+      if (apptHour < hour) {
+        const duration = this.getServiceDuration(appt);
+        const endTime = new Date(appt.dateTime.getTime() + duration * 60000);
+        const endHour = endTime.getHours();
+        // Se o agendamento termina depois deste horário, ele ocupa este slot
+        return endHour > hour || (endHour === hour && endTime.getMinutes() > 0);
+      }
+      
+      return false;
     }) || null;
   }
 
