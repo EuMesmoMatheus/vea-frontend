@@ -144,98 +144,28 @@ export class AgendaTabComponent implements OnInit, OnChanges {
             console.log('📋 Primeiro agendamento recebido:', appointmentsArray[0]);
           }
           
-          // Mapear agendamentos e normalizar dados
+          // Mapear agendamentos - API agora retorna dados consistentes
           const mapped = appointmentsArray.map((a: any) => {
             const dateTime = new Date(a.startDateTime);
             
-            // Normalizar serviços - pode vir em diferentes formatos
-            // IMPORTANTE: price já vem como número da API, não precisa parsear
-            let normalizedServices: any[] | undefined = undefined;
-            let normalizedService: any | undefined = undefined;
-            
-            // Helper para obter preço (já é número, mas pode ter nomes diferentes)
-            const getPrice = (s: any): number => {
-              if (s.price !== undefined && s.price !== null) return typeof s.price === 'number' ? s.price : parseFloat(String(s.price)) || 0;
-              if (s.Price !== undefined && s.Price !== null) return typeof s.Price === 'number' ? s.Price : parseFloat(String(s.Price)) || 0;
-              if (s.servicePrice !== undefined && s.servicePrice !== null) return typeof s.servicePrice === 'number' ? s.servicePrice : parseFloat(String(s.servicePrice)) || 0;
-              return 0;
-            };
-            
-            // Tenta services (array)
-            if (a.services && Array.isArray(a.services) && a.services.length > 0) {
-              normalizedServices = a.services.map((s: any) => ({
-                id: s.id || s.Id || s.serviceId || s.ServiceId,
-                name: s.name || s.Name || s.serviceName || s.ServiceName || 'Serviço',
-                duration: s.duration || s.Duration || s.durationMinutes || 60,
-                price: getPrice(s) // Price já é número, usa diretamente
-              }));
-            }
-            
-            // Tenta service (objeto único)
-            if (a.service && typeof a.service === 'object') {
-              normalizedService = {
-                id: a.service.id || a.service.Id || a.service.serviceId,
-                name: a.service.name || a.service.Name || a.service.serviceName || 'Serviço',
-                duration: a.service.duration || a.service.Duration || a.service.durationMinutes || 60,
-                price: getPrice(a.service) // Price já é número, usa diretamente
-              };
-            }
-            
-            // Tenta servicesJson
-            if (a.servicesJson && typeof a.servicesJson === 'string') {
-              try {
-                const parsed = JSON.parse(a.servicesJson);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  normalizedServices = parsed.map((s: any) => ({
-                    id: s.id || s.Id || s.serviceId || s.ServiceId,
-                    name: s.name || s.Name || s.serviceName || s.ServiceName || 'Serviço',
-                    duration: s.duration || s.Duration || s.durationMinutes || 60,
-                    price: s.price || s.Price || s.servicePrice || 0
-                  }));
-                } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                  normalizedService = {
-                    id: parsed.id || parsed.Id || parsed.serviceId,
-                    name: parsed.name || parsed.Name || parsed.serviceName || 'Serviço',
-                    duration: parsed.duration || parsed.Duration || parsed.durationMinutes || 60,
-                    price: parsed.price || parsed.Price || parsed.servicePrice || 0
-                  };
-                }
-              } catch (e) {
-                console.warn('⚠️ Erro ao parsear servicesJson:', e);
-              }
-            }
-            
-            // Retorna agendamento normalizado
+            // API retorna services[] completo com price já como número
+            // Não precisa mais normalizar - usar diretamente
             const normalized: any = {
               ...a,
               dateTime: dateTime
             };
             
-            // Adiciona serviços normalizados se existirem
-            if (normalizedServices) {
-              normalized.services = normalizedServices;
-            } else if (a.services) {
-              normalized.services = a.services;
-            }
-            
-            if (normalizedService) {
-              normalized.service = normalizedService;
-            } else if (a.service) {
-              normalized.service = a.service;
-            }
-            
-            // Garantir que campos numéricos sejam números (já vem como número da API)
+            // Garantir que totalPrice seja número (já vem como número da API)
             if (a.totalPrice !== undefined && a.totalPrice !== null) {
-              normalized.totalPrice = this.toNumber(a.totalPrice);
+              normalized.totalPrice = typeof a.totalPrice === 'number' ? a.totalPrice : parseFloat(String(a.totalPrice)) || 0;
             }
-            if (a.totalAmount !== undefined && a.totalAmount !== null) {
-              normalized.totalAmount = this.toNumber(a.totalAmount);
-            }
-            if (a.price !== undefined && a.price !== null) {
-              normalized.price = this.toNumber(a.price);
-            }
-            if (a.totalDurationMinutes || a.totalDuration) {
-              normalized.totalDurationMinutes = a.totalDurationMinutes || a.totalDuration;
+            
+            // Garantir que services[].price seja número (já vem como número da API)
+            if (a.services && Array.isArray(a.services)) {
+              normalized.services = a.services.map((s: any) => ({
+                ...s,
+                price: typeof s.price === 'number' ? s.price : parseFloat(String(s.price)) || 0
+              }));
             }
             
             return normalized;
@@ -384,8 +314,20 @@ export class AgendaTabComponent implements OnInit, OnChanges {
     // Total de agendamentos
     this.dayMetrics.totalAppointments = appointments.length;
 
-    // Total faturado
+    // Total faturado - usa totalPrice diretamente ou calcula de services[]
     this.dayMetrics.totalRevenue = appointments.reduce((sum, appt) => {
+      // Prioriza totalPrice (já vem como número da API)
+      if (appt.totalPrice !== undefined && appt.totalPrice !== null) {
+        return sum + (typeof appt.totalPrice === 'number' ? appt.totalPrice : parseFloat(String(appt.totalPrice)) || 0);
+      }
+      // Fallback: calcula de services[] (price já vem como número)
+      if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+        const total = appt.services.reduce((s: number, svc: any) => {
+          if (!svc || svc.price === undefined || svc.price === null) return s;
+          return s + (typeof svc.price === 'number' ? svc.price : parseFloat(String(svc.price)) || 0);
+        }, 0);
+        return sum + total;
+      }
       return sum + this.getServicePriceNumber(appt);
     }, 0);
 
@@ -520,7 +462,7 @@ export class AgendaTabComponent implements OnInit, OnChanges {
 
   // Helper methods para serviços
   getServiceName(appt: LocalAppointment): string {
-    // Primeiro tenta services (array) - dados já normalizados
+    // ✅ Prioridade: services[] (API retorna completo)
     if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
       const serviceNames = appt.services
         .filter((s: any) => s && s.name && typeof s.name === 'string' && s.name.trim().length > 0)
@@ -531,130 +473,63 @@ export class AgendaTabComponent implements OnInit, OnChanges {
       }
     }
     
-    // Depois tenta service (objeto único) - dados já normalizados
+    // Fallback: service (objeto único)
     if (appt.service && appt.service.name && typeof appt.service.name === 'string' && appt.service.name.trim().length > 0) {
       return appt.service.name.trim();
-    }
-    
-    // Fallback: tenta servicesJson se ainda não foi normalizado
-    if (appt.servicesJson && typeof appt.servicesJson === 'string') {
-      try {
-        const parsed = JSON.parse(appt.servicesJson);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const serviceNames = parsed
-            .filter((s: any) => s && (s.name || s.Name || s.serviceName))
-            .map((s: any) => (s.name || s.Name || s.serviceName || 'Serviço').trim());
-          
-          if (serviceNames.length > 0 && serviceNames[0] !== 'Serviço') {
-            return serviceNames.join(', ');
-          }
-        } else if (parsed && typeof parsed === 'object' && parsed.name) {
-          return String(parsed.name || parsed.Name || parsed.serviceName || 'Serviço').trim();
-        }
-      } catch (e) {
-        // Ignora erro de parsing
-      }
     }
     
     return 'Serviço';
   }
 
   getServiceDuration(appt: LocalAppointment): number {
+    // ✅ Prioridade 1: totalDurationMinutes (já vem da API)
     if (appt.totalDurationMinutes) {
       return appt.totalDurationMinutes;
     }
+    
+    // ✅ Prioridade 2: Calcular de services[] (duration já vem como número)
     if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
       const total = appt.services.reduce((sum: number, s: any) => sum + (s.duration || 0), 0);
       if (total > 0) return total;
     }
+    
+    // Fallback: service único
     if (appt.service?.duration) {
       return appt.service.duration;
     }
-    // Tenta servicesJson se existir
-    if (appt.servicesJson) {
-      try {
-        const parsed = JSON.parse(appt.servicesJson);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const total = parsed.reduce((sum: number, s: any) => sum + (s.duration || 0), 0);
-          if (total > 0) return total;
-        }
-      } catch (e) {
-        // Ignora erro de parsing
-      }
-    }
-    return 60;
-  }
-
-  // Helper para converter valor para número (já pode ser número ou string)
-  private toNumber(value: any): number {
-    if (value === null || value === undefined) return 0;
-    if (typeof value === 'number') {
-      return isNaN(value) ? 0 : value;
-    }
-    if (typeof value === 'string') {
-      // Remove formatação brasileira se houver (R$ 50,00 -> 50.00)
-      const cleaned = value.replace(/[R$\s]/g, '').replace(',', '.');
-      const parsed = parseFloat(cleaned);
-      return isNaN(parsed) ? 0 : parsed;
-    }
-    return 0;
+    
+    return 60; // Duração padrão
   }
 
   getServicePriceNumber(appt: LocalAppointment): number {
-    // Primeiro verifica se há um totalPrice direto no agendamento
-    const apptAny = appt as any;
-    if (apptAny.totalPrice !== undefined && apptAny.totalPrice !== null) {
-      const price = this.toNumber(apptAny.totalPrice);
-      if (price > 0) return price;
+    // ✅ Prioridade 1: Usar totalPrice diretamente (já vem como número da API)
+    if (appt.totalPrice !== undefined && appt.totalPrice !== null) {
+      return typeof appt.totalPrice === 'number' ? appt.totalPrice : parseFloat(String(appt.totalPrice)) || 0;
     }
+    
+    // ✅ Prioridade 2: Calcular a partir de services[] (price já vem como número)
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      const total = appt.services.reduce((sum: number, s: any) => {
+        if (!s || s.price === undefined || s.price === null) return sum;
+        // Price já vem como número da API
+        return sum + (typeof s.price === 'number' ? s.price : parseFloat(String(s.price)) || 0);
+      }, 0);
+      if (total > 0) return total;
+    }
+    
+    // Fallback: tenta outros campos (compatibilidade)
+    const apptAny = appt as any;
     if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
-      const price = this.toNumber(apptAny.totalAmount);
+      const price = typeof apptAny.totalAmount === 'number' ? apptAny.totalAmount : parseFloat(String(apptAny.totalAmount)) || 0;
       if (price > 0) return price;
     }
     if (apptAny.price !== undefined && apptAny.price !== null) {
-      const price = this.toNumber(apptAny.price);
+      const price = typeof apptAny.price === 'number' ? apptAny.price : parseFloat(String(apptAny.price)) || 0;
       if (price > 0) return price;
     }
-    
-    // Depois tenta calcular a partir dos serviços (array)
-    // O price já vem como número da API, então usamos diretamente
-    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
-      const total = appt.services.reduce((sum: number, s: any) => {
-        if (!s) return sum;
-        const price = this.toNumber(s.price);
-        return sum + price;
-      }, 0);
-      if (total > 0) {
-        return total;
-      }
-    }
-    
-    // Tenta service (objeto único)
-    // O price já vem como número da API
     if (appt.service?.price !== undefined && appt.service?.price !== null) {
-      const price = this.toNumber(appt.service.price);
-      if (price > 0) {
-        return price;
-      }
-    }
-    
-    // Tenta servicesJson se existir (string JSON)
-    if (appt.servicesJson) {
-      try {
-        const parsed = JSON.parse(appt.servicesJson);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const total = parsed.reduce((sum: number, s: any) => {
-            if (!s) return sum;
-            const price = this.toNumber(s.price);
-            return sum + price;
-          }, 0);
-          if (total > 0) {
-            return total;
-          }
-        }
-      } catch (e) {
-        // Ignora erro de parsing
-      }
+      const price = typeof appt.service.price === 'number' ? appt.service.price : parseFloat(String(appt.service.price)) || 0;
+      if (price > 0) return price;
     }
     
     return 0;

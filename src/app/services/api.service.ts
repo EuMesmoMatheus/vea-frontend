@@ -76,10 +76,11 @@ export interface Appointment {
   endDateTime?: string;
   status: string;
   companyId?: number;
+  employeeId?: number;
   clientId?: number;
   servicesJson?: string;
   totalDurationMinutes?: number;
-  totalPrice?: number;
+  totalPrice?: number; // ✅ Preço total (decimal em R$) - já vem como número
   totalAmount?: number;
   price?: number;
   employee?: Employee;
@@ -87,13 +88,13 @@ export interface Appointment {
     id: number;
     name: string;
     duration?: number;
-    price?: number;
+    price?: number; // ✅ Já vem como número da API
   };
   services?: Array<{
     id: number;
     name: string;
     duration?: number;
-    price?: number;
+    price?: number; // ✅ Já vem como número da API
   }>;
 }
 interface ServiceReport {
@@ -116,13 +117,14 @@ export interface EmployeeAppointment {
   status: string;
   clientName: string;
   clientPhone?: string;
+  totalDurationMinutes: number;
+  totalPrice?: number; // ✅ Preço total (decimal em R$) - já vem como número
   services: Array<{
     id: number;
     name: string;
     duration?: number;
-    price?: number;
+    price?: number; // ✅ Já vem como número da API
   }>;
-  totalDurationMinutes: number;
 }
 
 export interface EmployeeAppointmentsResponse {

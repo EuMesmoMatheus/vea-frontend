@@ -202,7 +202,7 @@
                           <span> • {{ getServiceDuration(appt) }}min</span>
                         </div>
                         <div class="flex items-center justify-between text-xs">
-                          <span class="font-medium">R$ {{ getTotalPrice(appt.services).toFixed(2) }}</span>
+                          <span class="font-medium">R$ {{ getTotalPrice(appt.services, appt).toFixed(2) }}</span>
                           <span>{{ getStatusIcon(appt.status) }}</span>
                         </div>
                       </div>
@@ -273,7 +273,7 @@
                           <span> • {{ getServiceDuration(appt) }}min</span>
                         </div>
                         <div class="flex items-center justify-between text-[10px] sm:text-[11px]">
-                          <span class="font-medium">R$ {{ getTotalPrice(appt.services).toFixed(0) }}</span>
+                          <span class="font-medium">R$ {{ getTotalPrice(appt.services, appt).toFixed(0) }}</span>
                           <span>{{ getStatusIcon(appt.status) }}</span>
                         </div>
                       </div>

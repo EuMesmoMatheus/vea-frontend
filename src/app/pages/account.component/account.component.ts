@@ -237,35 +237,33 @@ export class AccountComponent implements OnInit {
 
   // CALCULA O PREÇO TOTAL DO AGENDAMENTO
   getTotalPrice(appt: Appointment): number {
-    const apptAny = appt as any;
-    
-    // Prioridade 1: Verificar campos diretos do agendamento
-    if (apptAny.totalPrice !== undefined && apptAny.totalPrice !== null) {
-      const price = this.toNumber(apptAny.totalPrice);
-      if (price > 0) return price;
-    }
-    if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
-      const price = this.toNumber(apptAny.totalAmount);
-      if (price > 0) return price;
-    }
-    if (apptAny.price !== undefined && apptAny.price !== null) {
-      const price = this.toNumber(apptAny.price);
-      if (price > 0) return price;
+    // ✅ Prioridade 1: Usar totalPrice diretamente (já vem como número da API)
+    if (appt.totalPrice !== undefined && appt.totalPrice !== null) {
+      return typeof appt.totalPrice === 'number' ? appt.totalPrice : parseFloat(String(appt.totalPrice)) || 0;
     }
     
-    // Prioridade 2: Array de serviços (price já vem como número)
+    // ✅ Prioridade 2: Calcular de services[] (price já vem como número da API)
     if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
       const total = appt.services.reduce((sum: number, s: any) => {
-        if (!s) return sum;
-        const price = this.toNumber(s.price);
-        return sum + price;
+        if (!s || s.price === undefined || s.price === null) return sum;
+        // Price já vem como número da API
+        return sum + (typeof s.price === 'number' ? s.price : parseFloat(String(s.price)) || 0);
       }, 0);
       if (total > 0) return total;
     }
     
-    // Prioridade 3: Serviço único (price já vem como número)
+    // Fallback: outros campos (compatibilidade)
+    const apptAny = appt as any;
+    if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
+      const price = typeof apptAny.totalAmount === 'number' ? apptAny.totalAmount : parseFloat(String(apptAny.totalAmount)) || 0;
+      if (price > 0) return price;
+    }
+    if (apptAny.price !== undefined && apptAny.price !== null) {
+      const price = typeof apptAny.price === 'number' ? apptAny.price : parseFloat(String(apptAny.price)) || 0;
+      if (price > 0) return price;
+    }
     if (appt.service?.price !== undefined && appt.service?.price !== null) {
-      const price = this.toNumber(appt.service.price);
+      const price = typeof appt.service.price === 'number' ? appt.service.price : parseFloat(String(appt.service.price)) || 0;
       if (price > 0) return price;
     }
     

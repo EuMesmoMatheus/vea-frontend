@@ -384,15 +384,20 @@ export class EmployeeDashboardComponent implements OnInit {
     return 0;
   }
 
-  getTotalPrice(services: Array<{ price?: number }>): number {
+  getTotalPrice(services: Array<{ price?: number }>, appt?: EmployeeAppointment): number {
+    // ✅ Prioridade 1: Usar totalPrice diretamente se disponível (já vem como número)
+    if (appt && appt.totalPrice !== undefined && appt.totalPrice !== null) {
+      return typeof appt.totalPrice === 'number' ? appt.totalPrice : parseFloat(String(appt.totalPrice)) || 0;
+    }
+    
+    // ✅ Prioridade 2: Calcular de services[] (price já vem como número da API)
     if (!services || !Array.isArray(services) || services.length === 0) {
       return 0;
     }
     return services.reduce((sum, s) => {
-      if (!s) return sum;
-      // Price já vem como número da API, usa diretamente
-      const price = this.toNumber(s.price);
-      return sum + price;
+      if (!s || s.price === undefined || s.price === null) return sum;
+      // Price já vem como número da API
+      return sum + (typeof s.price === 'number' ? s.price : parseFloat(String(s.price)) || 0);
     }, 0);
   }
 

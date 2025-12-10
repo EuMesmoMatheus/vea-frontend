@@ -206,10 +206,10 @@ export class AgendamentoModalComponent implements OnChanges {
   }
 
   get totalPrice(): number {
-    // Price já vem como número da API
+    // ✅ Price já vem como número da API - usar diretamente
     return this.selectedServices.reduce((sum, s) => {
-      const price = typeof s.price === 'number' ? s.price : parseFloat(String(s.price || 0)) || 0;
-      return sum + price;
+      // Price já é number, mas garante conversão se necessário
+      return sum + (typeof s.price === 'number' ? s.price : parseFloat(String(s.price || 0)) || 0);
     }, 0);
   }
 
