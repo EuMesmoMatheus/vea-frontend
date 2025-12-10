@@ -12,21 +12,35 @@ import { RouterModule } from '@angular/router';
   styleUrls: ['./landing.component.css']
 })
 export class LandingComponent {
+  mobileMenuOpen = false;
+
   constructor(private router: Router) {}
 
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen = !this.mobileMenuOpen;
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen = false;
+  }
+
   navigateToHub(): void {
+    this.closeMobileMenu();
     this.router.navigate(['/hub']);
   }
 
   navigateToLogin(): void {
+    this.closeMobileMenu();
     this.router.navigate(['/login']);
   }
 
   navigateToRegister(): void {
+    this.closeMobileMenu();
     this.router.navigate(['/register']);
   }
 
   scrollToSection(section: string): void {
+    this.closeMobileMenu();
     document.getElementById(section)?.scrollIntoView({ behavior: 'smooth' });
   }
 }

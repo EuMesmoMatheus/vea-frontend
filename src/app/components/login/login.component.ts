@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy, AfterViewInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -30,7 +31,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
     private fb: FormBuilder,
     private api: ApiService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private toast: ToastService
   ) {
     console.log('Constructor rodando - initialLoading:', this.initialLoading); // <<< DEBUG: Confirma init
     this.loginForm = this.fb.group({
@@ -96,6 +98,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
             return; // Para aqui se inválido
           }
           this.resetForm();
+          this.toast.success('Login realizado com sucesso! 👋');
           const role = response.data.user?.role || 'Client'; // <<< Extrai role de data.user
           console.log('Role extraída - Vai chamar redirect com:', role); // NOVO: Pré-redirect
           this.redirectBasedOnRole(role);
@@ -105,6 +108,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
         error: (err) => {
           console.error('Subscribe.error rodando:', err); // NOVO: Se next não roda
           this.error = err.error?.message || 'Credenciais inválidas ou conta inativa. Verifique o e-mail de confirmação.';
+          this.toast.error('Falha no login. Verifique suas credenciais. ❌');
           console.error('Login error:', err);
           this.loading = false;
           this.cdr.detectChanges();
@@ -135,8 +139,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
         });
         break;
       case 'Employee':
-        console.log('Case Employee - Navegando pra /employee/agenda');
-        this.router.navigate(['/employee/agenda']);
+        console.log('Case Employee - Navegando pra /employee/dashboard');
+        this.router.navigate(['/employee/dashboard']);
         break;
       case 'Client':
         console.log('Case Client - Navegando pra /hub');

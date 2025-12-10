@@ -2,6 +2,8 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Service, Employee, AgendaEvent } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-agendamento-modal',
@@ -28,17 +30,42 @@ export class AgendamentoModalComponent implements OnChanges {
   currentStep = 1;
   minDate = new Date().toISOString().split('T')[0];
 
-  // URL DO BACKEND (AJUSTE SE FOR DIFERENTE)
-  private readonly apiBaseUrl = 'http://localhost:63562';
+  // URL DO BACKEND - usa environment
+  private readonly apiBaseUrl = environment.apiUrl;
+  
+  // Horário de funcionamento da empresa (carregado da API)
+  private companyOperatingHours: { start: string; end: string } = { start: '08:00', end: '18:00' };
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private toast: ToastService) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['companyId'] && this.companyId) {
       this.resetAll();
+      this.loadCompanyInfo();
       this.loadServices();
       this.loadEmployees();
     }
+  }
+
+  /**
+   * Carrega informações da empresa, incluindo horário de funcionamento
+   */
+  private loadCompanyInfo(): void {
+    this.api.getCompany(this.companyId).subscribe({
+      next: (response) => {
+        if (response.success && response.data?.operatingHours) {
+          const [start, end] = response.data.operatingHours.split('-');
+          this.companyOperatingHours = {
+            start: start?.trim() || '08:00',
+            end: end?.trim() || '18:00'
+          };
+        }
+      },
+      error: () => {
+        // Usa horário padrão se falhar
+        this.companyOperatingHours = { start: '08:00', end: '18:00' };
+      }
+    });
   }
 
   private resetAll() {
@@ -59,7 +86,10 @@ export class AgendamentoModalComponent implements OnChanges {
 
   loadEmployees() {
     this.api.getEmployeesByService(this.companyId, 0).subscribe(employees => {
-      this.employees = employees;
+      console.log('👥 Funcionários recebidos:', employees.map(e => ({ name: e.name, emailVerified: e.emailVerified })));
+      // Filtra apenas funcionários com email verificado
+      this.employees = employees.filter(emp => emp.emailVerified === true);
+      console.log('👥 Funcionários após filtro:', this.employees.length);
     });
   }
 
@@ -132,32 +162,38 @@ export class AgendamentoModalComponent implements OnChanges {
     }
 
     this.loadingSlots = true;
-    const totalMinutes = this.totalDuration;
-    const workHours = this.getWorkHours(this.selectedDate);
-    const possibleSlots = this.generatePossibleSlots(workHours.start, workHours.end, 30);
-
-    this.api.getAgendaDoDia(this.companyId, this.selectedEmployee.id, this.selectedDate)
-      .subscribe({
-        next: (events: AgendaEvent[]) => {
-          this.availableSlots = possibleSlots.filter(slot => {
-            const slotStart = new Date(`${this.selectedDate}T${slot}:00`);
-            const slotEnd = new Date(slotStart.getTime() + totalMinutes * 60000);
-            const dayEnd = new Date(`${this.selectedDate}T${workHours.end}:00`);
-            if (slotEnd > dayEnd) return false;
-
-            return !events.some(ev => {
-              const evStart = new Date(ev.start);
-              const evEnd = new Date(ev.end);
-              return slotStart < evEnd && slotEnd > evStart;
-            });
-          });
-          this.loadingSlots = false;
-        },
-        error: () => {
-          this.availableSlots = [];
-          this.loadingSlots = false;
+    // Usa o endpoint do back-end que calcula slots disponíveis considerando blocks e conflitos
+    const serviceIds = this.selectedServices.map(s => s.id);
+    
+    this.api.getAvailableSlots(
+      this.companyId,
+      this.selectedEmployee.id,
+      this.selectedDate,
+      serviceIds
+    ).subscribe({
+      next: (slots: string[]) => {
+        // Filtra horários passados se for hoje
+        const now = new Date();
+        const isToday = this.selectedDate === now.toISOString().split('T')[0];
+        
+        if (isToday) {
+          const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+          this.availableSlots = slots.filter(slot => slot > currentTime);
+        } else {
+          this.availableSlots = slots;
         }
-      });
+        this.loadingSlots = false;
+      },
+      error: (err) => {
+        console.error('Erro ao carregar slots disponíveis:', err);
+        this.availableSlots = [];
+        this.loadingSlots = false;
+        // Mostra mensagem de erro apenas se não for erro de validação esperado
+        if (err.status !== 400) {
+          this.toast.error('Erro ao carregar horários disponíveis. Tente novamente.');
+        }
+      }
+    });
   }
 
   selectTimeSlot(slot: string) {
@@ -169,7 +205,11 @@ export class AgendamentoModalComponent implements OnChanges {
   }
 
   get totalPrice(): number {
-    return this.selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+    // ✅ Price já vem como número da API - usar diretamente
+    return this.selectedServices.reduce((sum, s) => {
+      // Price já é number, mas garante conversão se necessário
+      return sum + (typeof s.price === 'number' ? s.price : parseFloat(String(s.price || 0)) || 0);
+    }, 0);
   }
 
   // MÉTODO CORRIGIDO — ERA "canConfirmConfirm" (ERRO MEU!)
@@ -179,26 +219,69 @@ export class AgendamentoModalComponent implements OnChanges {
     this.loading = true;
     const startDateTime = `${this.selectedDate}T${this.selectedTimeSlot}:00`;
 
-    const payload = {
+    // Calcular preço total e duração total
+    const totalPrice = this.totalPrice;
+    const totalDuration = this.totalDuration;
+
+    // Montar payload - campos opcionais só se tiverem valores válidos
+    const payload: any = {
       companyId: this.companyId,
       serviceIds: this.selectedServices.map(s => s.id),
       employeeId: this.selectedEmployee!.id,
-      clientId: this.clientId,
       startDateTime
     };
+    
+    // ClientId é opcional (pode ser 0 para visitantes) - back-end aceita null/0
+    if (this.clientId && this.clientId > 0) {
+      payload.clientId = this.clientId;
+    }
+
+    // Adicionar totalPrice e totalDurationMinutes apenas se tiverem valores válidos (> 0)
+    // O backend calcula automaticamente se não enviados, mas podemos enviar para validação
+    if (totalPrice > 0) {
+      payload.totalPrice = Number(totalPrice.toFixed(2)); // Garantir 2 casas decimais
+    }
+    if (totalDuration > 0) {
+      payload.totalDurationMinutes = Number(totalDuration);
+    }
+
+    console.log('📤 Payload do agendamento:', JSON.stringify(payload, null, 2));
+    console.log('💰 Preço total calculado:', totalPrice);
+    console.log('⏱️ Duração total:', totalDuration);
 
     this.api.createAppointment(payload).subscribe({
       next: (res) => {
         if (res.success) {
-          alert('Agendamento confirmado com sucesso!');
+          console.log('✅ Agendamento criado com sucesso:', res);
+          this.toast.success('Agendamento confirmado com sucesso! ✅');
           this.close.emit({ success: true });
         } else {
-          alert('Erro ao agendar.');
+          console.error('❌ Erro na resposta:', res);
+          const errorMsg = res.message || 'Erro ao agendar. Tente novamente.';
+          this.toast.error(errorMsg);
         }
         this.loading = false;
       },
-      error: () => {
-        alert('Erro ao agendar. Tente novamente.');
+      error: (err) => {
+        console.error('❌ Erro ao criar agendamento:', err);
+        console.error('❌ Detalhes do erro:', {
+          status: err.status,
+          message: err.message,
+          error: err.error,
+          url: err.url
+        });
+        
+        // Mensagem de erro mais específica
+        let errorMsg = 'Erro ao agendar. Tente novamente. ❌';
+        if (err.error?.message) {
+          errorMsg = err.error.message;
+        } else if (err.status === 500) {
+          errorMsg = 'Erro no servidor. Verifique os dados e tente novamente.';
+        } else if (err.status === 400) {
+          errorMsg = 'Dados inválidos. Verifique as informações e tente novamente.';
+        }
+        
+        this.toast.error(errorMsg);
         this.loading = false;
       }
     });
@@ -228,8 +311,12 @@ export class AgendamentoModalComponent implements OnChanges {
     return slots;
   }
 
-  getWorkHours(date: string): { start: string; end: string } {
-    const day = new Date(date).getDay();
-    return (day === 0 || day === 6) ? { start: '09:00', end: '14:00' } : { start: '08:00', end: '19:00' };
+  /**
+   * Retorna horário de funcionamento da empresa
+   * Usa os dados carregados da API (operatingHours)
+   */
+  getWorkHours(_date: string): { start: string; end: string } {
+    // Usa o horário de funcionamento da empresa carregado da API
+    return this.companyOperatingHours;
   }
 }

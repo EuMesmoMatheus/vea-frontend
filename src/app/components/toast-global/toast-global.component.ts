@@ -12,7 +12,12 @@ import { ToastService, ToastMessage } from '../../services/toast.service';
          class="fixed top-4 right-4 z-50 transform transition-all duration-400 ease-in-out toast-container" 
          [ngClass]="{'translate-x-0 opacity-100 scale-100': !isFading, 'toast-fading opacity-0 scale-95 translate-x-full': isFading}">
       <div class="flex items-center justify-between px-6 py-4 max-w-sm text-white shadow-xl border toast-content"
-           [ngClass]="{'bg-green-500 border-green-600': toast.type === 'success', 'bg-red-500 border-red-600': toast.type === 'error'}">
+           [ngClass]="{
+             'bg-green-500 border-green-600': toast.type === 'success', 
+             'bg-red-500 border-red-600': toast.type === 'error',
+             'bg-amber-500 border-amber-600': toast.type === 'warning',
+             'bg-blue-500 border-blue-600': toast.type === 'info'
+           }">
         <div class="flex items-center space-x-3 flex-1">
           <!-- Ícone sucesso -->
           <svg *ngIf="toast.type === 'success'" class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -21,6 +26,14 @@ import { ToastService, ToastMessage } from '../../services/toast.service';
           <!-- Ícone erro -->
           <svg *ngIf="toast.type === 'error'" class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          <!-- Ícone warning -->
+          <svg *ngIf="toast.type === 'warning'" class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+          <!-- Ícone info -->
+          <svg *ngIf="toast.type === 'info'" class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
           <span class="font-semibold">{{ toast.message }}</span>
         </div>

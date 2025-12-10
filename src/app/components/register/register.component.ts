@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -86,7 +87,8 @@ export class RegisterComponent implements OnInit {
     private fb: FormBuilder,
     private api: ApiService,
     private router: Router,
-    private cdr: ChangeDetectorRef // Force update visual senha
+    private cdr: ChangeDetectorRef, // Force update visual senha
+    private toast: ToastService
   ) {
     // Init criteria
     this.criteriaSubject.next({ length: false, upper: false, lower: false, number: false, special: false });
@@ -348,10 +350,11 @@ export class RegisterComponent implements OnInit {
       this.api.checkEmailExists(email)
         .pipe(take(1))
         .subscribe({
-          next: (response: any) => {
+          next: (response) => {
             this.loading = false;
-            console.log('API Response checkEmail:', response, 'Data exists?', !!response?.data); // EXPANDIDO: Log completo + check booleano
-            if (response?.data) {
+            // Back-end retorna ApiResponse<bool> com data: boolean
+            const emailExists = response?.success && response?.data === true;
+            if (emailExists) {
               this.error = 'E-mail já cadastrado no sistema.';
               const emailControl = this.registerForm.get('email');
               emailControl?.setErrors({ emailExists: true });
@@ -390,18 +393,24 @@ export class RegisterComponent implements OnInit {
         .subscribe({
           next: (response) => {
             this.loading = false;
+            this.toast.success('Cadastro realizado! Verifique seu e-mail. 📧');
             localStorage.setItem('user', JSON.stringify(response.user || response));
             this.resetForm();
             this.router.navigate(['/verify-email'], { state: { message: response.message || 'Verifique seu e-mail!' } });
           },
           error: (err) => {
             this.loading = false;
-            this.error = err.error?.Message || err.error?.message || 'Erro no cadastro.';  // <<< FIX: Tenta Message ou message
+            this.error = err.error?.Message || err.error?.message || 'Erro no cadastro.';
+            this.toast.error('Erro no cadastro. Verifique os dados. ❌');
             console.error('Erro register:', err);
           }
         });
     } else {
-      const operatingHours = startTime && endTime ? JSON.stringify({ startTime, endTime }) : '';
+      // Back-end espera JSON: {"startTime":"08:00","endTime":"18:00"}
+      const operatingHoursJson = startTime && endTime 
+        ? JSON.stringify({ startTime, endTime })
+        : '';
+      console.log('📤 Enviando operatingHours:', operatingHoursJson);
       const userData = new FormData();
       userData.append('name', formValue.name || '');
       userData.append('email', formValue.email || '');
@@ -415,7 +424,7 @@ export class RegisterComponent implements OnInit {
       userData.append('bairro', formValue.bairro || '');
       userData.append('cidade', formValue.cidade || '');
       userData.append('uf', formValue.uf || '');
-      userData.append('operatingHours', operatingHours);
+      userData.append('operatingHours', operatingHoursJson);
       userData.append('businessType', formValue.businessType || '');
       if (formValue.logo) userData.append('logo', formValue.logo as File);
       if (formValue.coverImage) userData.append('coverImage', formValue.coverImage as File);
@@ -427,13 +436,15 @@ export class RegisterComponent implements OnInit {
         .subscribe({
           next: (response) => {
             this.loading = false;
+            this.toast.success('Empresa cadastrada! Verifique seu e-mail. 📧');
             localStorage.setItem('user', JSON.stringify(response.user || response));
             this.resetForm();
             this.router.navigate(['/verify-email'], { state: { message: response.message || 'Verifique seu e-mail!' } });
           },
           error: (err) => {
             this.loading = false;
-            this.error = err.error?.Message || err.error?.message || 'Erro no cadastro.';  // <<< FIX: Tenta Message ou message
+            this.error = err.error?.Message || err.error?.message || 'Erro no cadastro.';
+            this.toast.error('Erro no cadastro da empresa. Verifique os dados. ❌');
             console.error('Erro register:', err);
           }
         });

@@ -1,20 +1,20 @@
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
 
     <!-- Header -->
-    <div class="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-4 text-center">
-      <h2 class="text-xl font-bold">Agendar Horário</h2>
+    <div class="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-3 sm:p-4 text-center">
+      <h2 class="text-lg sm:text-xl font-bold">Agendar Horário</h2>
     </div>
 
     <!-- Progresso -->
-    <div class="flex justify-center gap-3 py-3 bg-gray-50 text-xs">
-      <span [class]="currentStep === 1 ? 'text-pink-600 font-bold' : 'text-gray-400'">1. Serviços</span>
+    <div class="flex justify-center items-center gap-1 sm:gap-3 py-2 sm:py-3 bg-gray-50 text-[10px] sm:text-xs overflow-x-auto px-2">
+      <span [class]="currentStep === 1 ? 'text-pink-600 font-bold' : 'text-gray-400'" class="whitespace-nowrap">1. Serviços</span>
       <span class="text-gray-400">→</span>
-      <span [class]="currentStep === 2 ? 'text-pink-600 font-bold' : 'text-gray-400'">2. Profissional</span>
+      <span [class]="currentStep === 2 ? 'text-pink-600 font-bold' : 'text-gray-400'" class="whitespace-nowrap">2. Profissional</span>
       <span class="text-gray-400">→</span>
-      <span [class]="currentStep === 3 ? 'text-pink-600 font-bold' : 'text-gray-400'">3. Horário</span>
+      <span [class]="currentStep === 3 ? 'text-pink-600 font-bold' : 'text-gray-400'" class="whitespace-nowrap">3. Horário</span>
       <span class="text-gray-400">→</span>
-      <span [class]="currentStep === 4 ? 'text-pink-600 font-bold' : 'text-gray-400'">Confirmar</span>
+      <span [class]="currentStep === 4 ? 'text-pink-600 font-bold' : 'text-gray-400'" class="whitespace-nowrap">Confirmar</span>
     </div>
 
     <!-- Conteúdo -->
@@ -39,29 +39,29 @@
 
       <!-- PASSO 2: PROFISSIONAIS — FOTOS CARREGAM 100% -->
       <div *ngIf="currentStep === 2">
-        <h3 class="font-bold text-lg text-center mb-4">Com quem você quer?</h3>
-        <div class="grid grid-cols-4 gap-4">
+        <h3 class="font-bold text-base sm:text-lg text-center mb-4">Com quem você quer?</h3>
+        <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-4">
           <button *ngFor="let e of employees" (click)="selectEmployee(e)" class="text-center">
             <img [src]="getEmployeePhoto(e)" 
-                 class="w-16 h-16 rounded-full object-cover mx-auto border-4 transition-all
+                 class="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover mx-auto border-4 transition-all
                         {{selectedEmployee?.id === e.id ? 'border-pink-600 ring-4 ring-pink-300' : 'border-gray-300'}}"
                  alt="{{ e.name }}">
-            <p class="text-xs mt-2 font-medium">{{ e.name.split(' ')[0] }}</p>
+            <p class="text-[10px] sm:text-xs mt-1 sm:mt-2 font-medium truncate px-1">{{ e.name.split(' ')[0] }}</p>
           </button>
         </div>
       </div>
 
       <!-- PASSO 3: DATA E HORÁRIO -->
-      <div *ngIf="currentStep === 3" class="space-y-5">
-        <h3 class="font-bold text-lg text-center mb-4">Quando você pode?</h3>
+      <div *ngIf="currentStep === 3" class="space-y-4 sm:space-y-5">
+        <h3 class="font-bold text-base sm:text-lg text-center mb-3 sm:mb-4">Quando você pode?</h3>
         <input type="date" [(ngModel)]="selectedDate" [min]="minDate" (change)="loadAvailableSlots()"
-               class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-pink-500 text-center">
+               class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-pink-500 text-center text-sm sm:text-base">
         
         <div *ngIf="selectedDate" class="text-center">
-          <p class="text-sm text-gray-600 mb-3">Horários com <strong>{{ professionalFirstName }}</strong></p>
-          <div class="grid grid-cols-4 gap-3">
+          <p class="text-xs sm:text-sm text-gray-600 mb-3">Horários com <strong>{{ professionalFirstName }}</strong></p>
+          <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
             <button *ngFor="let slot of availableSlots" (click)="selectTimeSlot(slot)"
-                    class="py-3 rounded-lg text-sm font-medium transition-all
+                    class="py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-all
                            {{selectedTimeSlot === slot ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md' : 'bg-gray-100 hover:bg-gray-200'}}">
               {{ slot }}
             </button>
@@ -69,8 +69,8 @@
           <div *ngIf="loadingSlots" class="py-4">
             <i class="bi bi-hourglass-split text-2xl text-pink-600 animate-spin"></i>
           </div>
-          <div *ngIf="!loadingSlots && availableSlots.length === 0" class="py-6 text-gray-500">
-            <p>Nenhum horário disponível nessa data</p>
+          <div *ngIf="!loadingSlots && availableSlots.length === 0" class="py-4 sm:py-6 text-gray-500">
+            <p class="text-sm">Nenhum horário disponível nessa data</p>
           </div>
         </div>
       </div>
@@ -92,17 +92,17 @@
     </div>
 
     <!-- Botões -->
-    <div class="p-5 border-t flex justify-between gap-3">
-      <button (click)="cancel()" class="px-6 py-3 text-gray-600 font-medium">Cancelar</button>
-      <div class="flex gap-3">
-        <button *ngIf="currentStep > 1" (click)="previousStep()" class="px-6 py-3 bg-gray-200 rounded-lg font-medium">Voltar</button>
+    <div class="p-3 sm:p-5 border-t flex flex-col sm:flex-row justify-between gap-2 sm:gap-3">
+      <button (click)="cancel()" class="px-4 sm:px-6 py-2 sm:py-3 text-gray-600 font-medium text-sm sm:text-base order-2 sm:order-1">Cancelar</button>
+      <div class="flex gap-2 sm:gap-3 order-1 sm:order-2">
+        <button *ngIf="currentStep > 1" (click)="previousStep()" class="px-4 sm:px-6 py-2 sm:py-3 bg-gray-200 rounded-lg font-medium text-sm sm:text-base flex-1 sm:flex-none">Voltar</button>
         <button *ngIf="currentStep < 4" (click)="nextStep()"
                 [disabled]="(currentStep===1 && !selectedServices.length) || (currentStep===2 && !selectedEmployee) || (currentStep===3 && !selectedTimeSlot)"
-                class="px-8 py-3 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg font-bold disabled:opacity-50">
+                class="px-6 sm:px-8 py-2 sm:py-3 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg font-bold disabled:opacity-50 text-sm sm:text-base flex-1 sm:flex-none">
           Continuar
         </button>
         <button *ngIf="currentStep === 4" (click)="confirm()" [disabled]="loading"
-                class="px-10 py-3 bg-green-600 text-white rounded-lg font-bold flex items-center gap-2">
+                class="px-6 sm:px-10 py-2 sm:py-3 bg-green-600 text-white rounded-lg font-bold flex items-center justify-center gap-2 text-sm sm:text-base flex-1 sm:flex-none">
           Confirmar
         </button>
       </div>

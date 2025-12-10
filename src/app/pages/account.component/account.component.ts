@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Appointment } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -28,7 +30,12 @@ export class AccountComponent implements OnInit {
   // MODAL: ESSA LINHA É OBRIGATÓRIA!
   selectedAppointment: Appointment | null = null;
 
-  constructor(private api: ApiService, private router: Router) {}
+  constructor(
+    private api: ApiService, 
+    private router: Router, 
+    private toast: ToastService,
+    private confirmService: ConfirmService
+  ) {}
 
   ngOnInit(): void {
     this.loadUser();
@@ -119,16 +126,54 @@ export class AccountComponent implements OnInit {
   goBackToHub(): void { this.router.navigate(['/hub']); }
   goToLogin(): void { this.router.navigate(['/login']); }
 
-  cancelAppointment(id: number): void {
-    if (confirm('Tem certeza que deseja cancelar este agendamento?')) {
-      this.api.cancelAppointment(id).subscribe({
-        next: () => {
-          this.loadAppointments();
-          this.selectedAppointment = null; // fecha o modal se estiver aberto
-          alert('Cancelado com sucesso!');
-        },
-        error: () => alert('Erro ao cancelar.')
+  async cancelAppointment(id: number): Promise<void> {
+    try {
+      const confirmed = await this.confirmService.confirm({
+        title: 'Cancelar Agendamento',
+        message: 'Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.',
+        confirmText: 'Sim, cancelar',
+        cancelText: 'Não',
+        type: 'danger'
       });
+      
+      if (!confirmed) {
+        return; // Usuário cancelou a confirmação
+      }
+      
+      this.api.cancelAppointment(id).subscribe({
+        next: (response) => {
+          if (response && response.success !== false) {
+            this.loadAppointments();
+            this.selectedAppointment = null;
+            this.toast.success('Agendamento cancelado com sucesso! ✅');
+          } else {
+            const errorMsg = response?.message || 'Não foi possível cancelar o agendamento.';
+            this.toast.error(errorMsg);
+            console.error('Erro na resposta:', response);
+          }
+        },
+        error: (err) => {
+          console.error('Erro ao cancelar agendamento:', err);
+          let errorMessage = 'Erro ao cancelar agendamento.';
+          
+          if (err?.error?.message) {
+            errorMessage = err.error.message;
+          } else if (err?.message) {
+            errorMessage = err.message;
+          } else if (err?.status === 401) {
+            errorMessage = 'Você não tem permissão para cancelar este agendamento.';
+          } else if (err?.status === 404) {
+            errorMessage = 'Agendamento não encontrado.';
+          } else if (err?.status >= 500) {
+            errorMessage = 'Erro interno do servidor. Tente novamente mais tarde.';
+          }
+          
+          this.toast.error(errorMessage);
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao exibir confirmação:', error);
+      this.toast.error('Erro ao processar cancelamento. Tente novamente. ❌');
     }
   }
 
@@ -174,5 +219,76 @@ export class AccountComponent implements OnInit {
       'Cancelled': 'bg-red-100 text-red-800'
     };
     return map[appt.status] || 'bg-gray-100 text-gray-800';
+  }
+
+  // Helper para converter valor para número (price já vem como número da API)
+  private toNumber(value: any): number {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') {
+      return isNaN(value) ? 0 : value;
+    }
+    if (typeof value === 'string') {
+      const cleaned = value.replace(/[R$\s]/g, '').replace(',', '.');
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  }
+
+  // CALCULA O PREÇO TOTAL DO AGENDAMENTO
+  getTotalPrice(appt: Appointment): number {
+    // ✅ Prioridade 1: Usar totalPrice diretamente (já vem como número da API)
+    if (appt.totalPrice !== undefined && appt.totalPrice !== null) {
+      return typeof appt.totalPrice === 'number' ? appt.totalPrice : parseFloat(String(appt.totalPrice)) || 0;
+    }
+    
+    // ✅ Prioridade 2: Calcular de services[] (price já vem como número da API)
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      const total = appt.services.reduce((sum: number, s: any) => {
+        if (!s || s.price === undefined || s.price === null) return sum;
+        // Price já vem como número da API
+        return sum + (typeof s.price === 'number' ? s.price : parseFloat(String(s.price)) || 0);
+      }, 0);
+      if (total > 0) return total;
+    }
+    
+    // Fallback: outros campos (compatibilidade)
+    const apptAny = appt as any;
+    if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
+      const price = typeof apptAny.totalAmount === 'number' ? apptAny.totalAmount : parseFloat(String(apptAny.totalAmount)) || 0;
+      if (price > 0) return price;
+    }
+    if (apptAny.price !== undefined && apptAny.price !== null) {
+      const price = typeof apptAny.price === 'number' ? apptAny.price : parseFloat(String(apptAny.price)) || 0;
+      if (price > 0) return price;
+    }
+    if (appt.service?.price !== undefined && appt.service?.price !== null) {
+      const price = typeof appt.service.price === 'number' ? appt.service.price : parseFloat(String(appt.service.price)) || 0;
+      if (price > 0) return price;
+    }
+    
+    // Prioridade 4: servicesJson
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const total = parsed.reduce((sum: number, s: any) => {
+            if (!s) return sum;
+            const price = this.toNumber(s.price);
+            return sum + price;
+          }, 0);
+          if (total > 0) return total;
+        }
+      } catch (e) {
+        // Ignora erro de parsing
+      }
+    }
+    
+    return 0;
+  }
+
+  // FORMATA O PREÇO PARA EXIBIÇÃO
+  formatPrice(price: number): string {
+    return price.toFixed(2).replace('.', ',');
   }
 }

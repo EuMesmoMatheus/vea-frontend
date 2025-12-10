@@ -4,10 +4,11 @@ import { ApiService, Service, Appointment as ApiAppointment } from '../../servic
 import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { jwtDecode } from 'jwt-decode';
 import { ToastService } from '../../services/toast.service';
-import { ToastGlobalComponent } from '../../components/toast-global/toast-global.component';
+import { ConfirmService } from '../../services/confirm.service';
 
 interface ApiResponse<T = any> {
   success?: boolean;
@@ -86,8 +87,7 @@ import { ReportsTabComponent } from '../admin/reports-tab/reports-tab.component'
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, FormsModule,
-    AgendaTabComponent, ServicesTabComponent, EmployeesTabComponent, CompanyTabComponent, ReportsTabComponent,
-    ToastGlobalComponent
+    AgendaTabComponent, ServicesTabComponent, EmployeesTabComponent, CompanyTabComponent, ReportsTabComponent
   ],
   templateUrl: './admin-general.component.html',
   styleUrls: ['./admin-general.component.css'],
@@ -109,6 +109,7 @@ export class AdminGeneralComponent implements OnInit {
   employees: Employee[] = [];
   roles: Role[] = [];
   services: Service[] = [];
+  allServices: Service[] = []; // Cache de serviços para carregar pelo ID
   appointments: LocalAppointment[] = [];  // <<< FIX: Agora usa LocalAppointment
   serviceReports: ServiceReport[] = [];
   companyForm!: FormGroup;
@@ -129,7 +130,8 @@ export class AdminGeneralComponent implements OnInit {
     private api: ApiService,
     private cdr: ChangeDetectorRef,
     private router: Router,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private confirmService: ConfirmService
   ) {
     this.initializeCompanyForm();
   }
@@ -145,21 +147,49 @@ export class AdminGeneralComponent implements OnInit {
     }
     this.initialLoading = true;
     this.loading = true;
-    // <<< FIX: Datas baseadas na data atual (31/10/2025)
-    const today = new Date('2025-10-31');  // Data atual
+    // Datas baseadas na data atual
+    const today = new Date();
     const start = today.toISOString().split('T')[0];
     const end = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+    // Usar forkJoin com catchError em cada observable para não quebrar tudo se um falhar
     forkJoin({
-      company: this.api.getCompany(this.companyId),
-      employees: this.api.getEmployees(this.companyId),
-      roles: this.api.getRoles(this.companyId),
-      services: this.api.getServices(this.companyId, true),  // Inclui inativos no admin
+      company: this.api.getCompany(this.companyId).pipe(
+        catchError(err => {
+          console.error('❌ Erro ao carregar empresa:', err);
+          return of({ success: false, data: null, message: 'Erro ao carregar empresa' });
+        })
+      ),
+      employees: this.api.getEmployees(this.companyId).pipe(
+        catchError(err => {
+          console.error('❌ Erro ao carregar funcionários:', err);
+          return of({ success: false, data: [], message: 'Erro ao carregar funcionários' });
+        })
+      ),
+      roles: this.api.getRoles(this.companyId).pipe(
+        catchError(err => {
+          console.error('❌ Erro ao carregar cargos:', err);
+          return of({ success: false, data: [], message: 'Erro ao carregar cargos' });
+        })
+      ),
+      services: this.api.getServices(this.companyId, true).pipe(
+        catchError(err => {
+          console.error('❌ Erro ao carregar serviços:', err);
+          return of({ success: false, data: [], message: 'Erro ao carregar serviços' });
+        })
+      ),
       appointments: this.api.getAppointmentsWeek({
         start,
         end,
         companyId: this.companyId
-      })
+      }).pipe(
+        catchError(err => {
+          console.error('❌ Erro ao carregar agendamentos:', err);
+          console.error('❌ Detalhes:', { status: err.status, message: err.message, error: err.error });
+          // Retorna resposta vazia para não quebrar o forkJoin
+          return of({ success: false, data: [], message: 'Erro ao carregar agendamentos' });
+        })
+      )
     }).subscribe({
       next: (responses) => {
         if (responses.company?.success !== true || !responses.company.data) {
@@ -168,10 +198,15 @@ export class AdminGeneralComponent implements OnInit {
           return;
         }
         const data = responses.company.data as CompanyDto;
+        console.log('📦 Dados da empresa recebidos:', data);
+        console.log('⏰ operatingHours:', data.operatingHours);
         this.companyForm.patchValue(data);
         if (data.operatingHours) {
           const [startTime, endTime] = data.operatingHours.split('-');
+          console.log('⏰ Parsed times:', { startTime, endTime });
           this.companyForm.patchValue({ startTime: startTime?.trim() || '10:00', endTime: endTime?.trim() || '18:00' });
+        } else {
+          console.warn('⚠️ operatingHours está vazio ou undefined!');
         }
         this.employees = (responses.employees?.success === true ? (responses.employees.data || []) : []).map((emp: Employee) => ({
           ...emp,
@@ -181,24 +216,79 @@ export class AdminGeneralComponent implements OnInit {
         
         // FIX DEFINITIVO: Map garante companyId como number (resolve assignable no binding)
         this.loadServices(this.companyId, responses.services);
+        // Cache de serviços para uso na normalização
+        this.allServices = this.services;
         
         // <<< FIX: Mapeamento corrigido para LocalAppointment (usa startDateTime do ApiAppointment)
-        this.appointments = (responses.appointments?.success === true ? (responses.appointments.data || []) : []).map((a: ApiAppointment) => ({
-          ...a,
-          dateTime: new Date(a.startDateTime)  // <<< Adiciona dateTime local
-        })) as LocalAppointment[];
+        // Se appointments falhou, usar array vazio
+        const rawAppointments = (responses.appointments?.success === true ? (responses.appointments.data || []) : []);
+        console.log('📦 Agendamentos brutos recebidos:', rawAppointments.length);
+        
+        // Normalizar agendamentos e carregar serviços quando necessário
+        this.appointments = rawAppointments.map((a: any) => {
+          const dateTime = new Date(a.startDateTime);
+          const normalized: any = {
+            ...a,
+            dateTime: dateTime
+          };
+          
+          // Garantir que totalPrice seja número
+          if (a.totalPrice !== undefined && a.totalPrice !== null) {
+            normalized.totalPrice = typeof a.totalPrice === 'number' ? a.totalPrice : parseFloat(String(a.totalPrice)) || 0;
+          }
+          
+          // Se services[] não vier completo, mas servicesJson existir, carregar pelo ID
+          if (a.services && Array.isArray(a.services) && a.services.length > 0) {
+            normalized.services = a.services.map((s: any) => ({
+              ...s,
+              price: typeof s.price === 'number' ? s.price : parseFloat(String(s.price)) || 0
+            }));
+          } else if (a.servicesJson && typeof a.servicesJson === 'string' && a.servicesJson.trim()) {
+            // ServicesJson é uma string com IDs separados por vírgula (ex: "1,2,3")
+            try {
+              const serviceIds = a.servicesJson.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+              if (serviceIds.length > 0 && this.allServices.length > 0) {
+                const loadedServices = serviceIds.map((id: number) => {
+                  const service = this.allServices.find(s => s.id === id);
+                  if (service) {
+                    return {
+                      id: service.id,
+                      name: service.name,
+                      duration: service.duration,
+                      price: typeof service.price === 'number' ? service.price : parseFloat(String(service.price)) || 0
+                    };
+                  }
+                  return null;
+                }).filter((s: any) => s !== null);
+                
+                if (loadedServices.length > 0) {
+                  normalized.services = loadedServices;
+                  console.log('✅ Serviços carregados pelo ID no admin-general:', loadedServices);
+                }
+              }
+            } catch (e) {
+              console.error('❌ Erro ao processar servicesJson:', e, a.servicesJson);
+            }
+          }
+          
+          return normalized;
+        }) as LocalAppointment[];
+        
+        console.log('📋 Agendamentos normalizados:', this.appointments.length);
 
         // Safe report generation (price agora é number garantido)
         const reportsMap = new Map<string, ServiceReport>();
         this.appointments.forEach(a => {
-          if (a.service && a.status === 'Confirmed') {
-            const key = a.service.name;
-            if (!reportsMap.has(key)) {
-              reportsMap.set(key, { name: key, count: 0, totalPrice: 0 });
+          if (a.status === 'Confirmed') {
+            const serviceName = this.getServiceName(a);
+            if (serviceName && serviceName !== 'Serviço') {
+              if (!reportsMap.has(serviceName)) {
+                reportsMap.set(serviceName, { name: serviceName, count: 0, totalPrice: 0 });
+              }
+              const report = reportsMap.get(serviceName)!;
+              report.count++;
+              report.totalPrice += this.getAppointmentPrice(a);
             }
-            const report = reportsMap.get(key)!;
-            report.count++;
-            report.totalPrice += a.service.price || 0;
           }
         });
         this.serviceReports = Array.from(reportsMap.values());
@@ -278,6 +368,20 @@ export class AdminGeneralComponent implements OnInit {
     };
   }
 
+  // Helper para converter valor para número (price já vem como número da API)
+  private toNumber(value: any): number {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') {
+      return isNaN(value) ? 0 : value;
+    }
+    if (typeof value === 'string') {
+      const cleaned = value.replace(/[R$\s]/g, '').replace(',', '.');
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  }
+
   onServiceSaved(service: Service): void {
     service.companyId = this.companyId;  // Seta como number
     if (!service.companyId) {
@@ -321,8 +425,13 @@ export class AdminGeneralComponent implements OnInit {
     this.toastService.show(message, 'error');
   }
 
-  onServiceDeleted(id: number): void {
-    if (!confirm('Tem certeza? Isso remove o serviço permanentemente.')) return;
+  async onServiceDeleted(id: number): Promise<void> {
+    const confirmed = await this.confirmService.danger(
+      'Isso remove o serviço permanentemente. Deseja continuar?',
+      'Excluir Serviço'
+    );
+    if (!confirmed) return;
+    
     this.api.deleteService(id).subscribe({
       next: (response) => {
         if (response.success) {
@@ -424,4 +533,103 @@ export class AdminGeneralComponent implements OnInit {
 
   trackById(index: number, item: any): number { return item.id; }
   trackByName(index: number, item: ServiceReport): string { return item.name; }
+
+  // Métodos auxiliares para a agenda rápida
+  getUpcomingAppointments(): LocalAppointment[] {
+    const now = new Date();
+    return this.appointments
+      .filter(a => a.status !== 'Cancelled' && a.dateTime >= now)
+      .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
+      .slice(0, 5); // Mostrar apenas os próximos 5
+  }
+
+  formatTime(date: Date): string {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
+  // Métodos públicos para uso no template e internamente
+  getServiceName(appt: LocalAppointment | ApiAppointment): string {
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      const serviceNames = appt.services
+        .filter((s: any) => s && s.name)
+        .map((s: any) => s.name);
+      if (serviceNames.length > 0) {
+        return serviceNames.join(', ');
+      }
+    }
+    if (appt.service?.name) {
+      return appt.service.name;
+    }
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const serviceNames = parsed
+            .filter((s: any) => s && s.name)
+            .map((s: any) => s.name);
+          if (serviceNames.length > 0) {
+            return serviceNames.join(', ');
+          }
+        }
+      } catch (e) {
+        // Ignora erro de parsing
+      }
+    }
+    return 'Serviço';
+  }
+
+  getAppointmentPrice(appt: LocalAppointment | ApiAppointment): number {
+    const apptAny = appt as any;
+    
+    // Prioridade 1: Verificar campos diretos do agendamento
+    if (apptAny.totalPrice !== undefined && apptAny.totalPrice !== null) {
+      const price = this.toNumber(apptAny.totalPrice);
+      if (price > 0) return price;
+    }
+    if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
+      const price = this.toNumber(apptAny.totalAmount);
+      if (price > 0) return price;
+    }
+    if (apptAny.price !== undefined && apptAny.price !== null) {
+      const price = this.toNumber(apptAny.price);
+      if (price > 0) return price;
+    }
+    
+    // Prioridade 2: Array de serviços
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      const total = appt.services.reduce((sum: number, s: any) => {
+        if (!s) return sum;
+        const price = this.toNumber(s.price);
+        return sum + price;
+      }, 0);
+      if (total > 0) return total;
+    }
+    
+    // Prioridade 3: Serviço único
+    if (appt.service?.price !== undefined && appt.service?.price !== null) {
+      const price = this.toNumber(appt.service.price);
+      if (price > 0) return price;
+    }
+    
+    // Prioridade 4: servicesJson
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const total = parsed.reduce((sum: number, s: any) => {
+            if (!s) return sum;
+            const price = this.toNumber(s.price);
+            return sum + price;
+          }, 0);
+          if (total > 0) return total;
+        }
+      } catch (e) {
+        // Ignora erro de parsing
+      }
+    }
+    
+    return 0;
+  }
 }

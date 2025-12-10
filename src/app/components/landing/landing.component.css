@@ -13,8 +13,23 @@
   }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .animate-fade-in-up {
   animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
 }
 
 /* Adicione aos cards para animação sequencial */
@@ -22,3 +37,15 @@
 .grid > div:nth-child(2) { animation-delay: 0.2s; }
 .grid > div:nth-child(3) { animation-delay: 0.3s; }
 .grid > div:nth-child(4) { animation-delay: 0.4s; }
+
+/* Mobile responsiveness fixes */
+@media (max-width: 640px) {
+  .text-5xl {
+    font-size: 2rem !important;
+    line-height: 2.5rem !important;
+  }
+  .text-7xl {
+    font-size: 2.5rem !important;
+    line-height: 3rem !important;
+  }
+}

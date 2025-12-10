@@ -8,8 +8,8 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { timeout, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { TrackByFunction } from '@angular/core';
-// CORREÇÃO: Import ajustado para subpasta 'agendamento-modal/'
-import { AgendamentoModalComponent } from '../agendamento-modal/agendamento-modal.component';  // <- Correto: subpasta agendamento-modal
+import { AgendamentoModalComponent } from '../agendamento-modal/agendamento-modal.component';
+import { environment } from '../../../environments/environment';
 
 /**
  * Componente de Hub para exibição de empresas cadastradas.
@@ -64,11 +64,15 @@ export class HubComponent implements OnInit {
   loadingLocation = false;
   user: any = {};
   private searchSubject = new Subject<string>();
-  private apiBaseUrl = 'https://localhost:63561';
+  private apiBaseUrl = environment.apiUrl;
   private ibgeApiUrl = 'https://servicodados.ibge.gov.br/api/v1/localidades';
   // Modal props (sem Angular Material, usando flag)
   showModal = false;
   selectedCompanyId: number | null = null;
+  
+  // Modo visitante (conta fantasma)
+  isGuest = false;
+  showLoginModal = false; // Modal para criar conta ao tentar agendar
 
   constructor(
     private api: ApiService,
@@ -76,19 +80,13 @@ export class HubComponent implements OnInit {
     private router: Router
   ) {}
 
-  async ngOnInit(): Promise<void> {  // <<< FIX: Async pra aguardar loadUser
+  async ngOnInit(): Promise<void> {
     this.showFilters = false; // Default: filtros fechados
-    await this.loadUser();  // <<< FIX: Await pra garantir user pronto antes do check
+    this.loadUser(); // Carrega usuário (ou define como visitante)
 
-    // <<< FIX: Check mais robusto – se name vazio/falsy, redirect com log
-    if (!this.user.name || this.user.name.trim() === '') {
-      console.error('Usuário sem nome válido após load. LocalStorage "user":', localStorage.getItem('user'));  // <<< Debug full
-      console.warn('Usuário não logado ou dados inválidos, redirecionando pra login...');
-      this.router.navigate(['/login'], { queryParams: { returnUrl: '/hub' } });  // <<< FIX: Adiciona returnUrl pra voltar após login
-      return;
-    }
-
-    console.log('User validado e carregado:', this.user);  // <<< Debug: Confirma name/email/role
+    console.log('User carregado:', this.user, '| isGuest:', this.isGuest);
+    
+    // Carrega empresas independente de login
     this.loadCompanies();
     this.loadLocationData();
 
@@ -97,17 +95,9 @@ export class HubComponent implements OnInit {
       debounceTime(300),
       distinctUntilChanged()
     ).subscribe((timestamp) => {
-      console.log('Debounce fired:', timestamp); // Debug log
+      console.log('Debounce fired:', timestamp);
       this.applyFiltersWithLoading();
     });
-
-    // <<< FIX: Double-check pós-load (pra timing issues)
-    setTimeout(() => {
-      if (!this.user.name || this.user.name.trim() === '') {
-        console.error('Double-check falhou: User ainda inválido, forçando reload.');
-        window.location.reload();  // <<< Força reload da página se persistir
-      }
-    }, 500);  // 500ms pra dar tempo pro localStorage "assentar"
   }
 
   // Toggle para abrir/fechar filtros
@@ -160,35 +150,34 @@ export class HubComponent implements OnInit {
     localStorage.setItem('userCep', this.userCep);
   }
 
-  private async loadUser(): Promise<void> {  // <<< FIX: Async + melhor validação
+  private loadUser(): void {
     const userData = localStorage.getItem('user');
-    console.log('LocalStorage "user" raw:', userData);  // <<< Debug: Vê o JSON cru
+    const token = localStorage.getItem('token');
+    console.log('LocalStorage "user" raw:', userData);
 
-    if (userData) {
+    if (userData && token) {
       try {
         this.user = JSON.parse(userData);
         console.log('User parseado:', this.user);
 
-        // <<< FIX: Validação strict – se role Client e name/email presentes, OK; senão, limpa e redirect
-        if (this.user.role !== 'Client' || !this.user.name || !this.user.email || this.user.name.trim() === '' || this.user.email.trim() === '') {
-          console.error('User dados inválidos (role, name ou email faltando):', this.user);
-          localStorage.removeItem('user');  // <<< Limpa inválido
-          localStorage.removeItem('token');  // <<< Limpa token também
-          throw new Error('Dados de user incompletos ou inválidos');  // Triggera fallback/redirect
+        // Valida se tem name/email válidos
+        if (this.user.name && this.user.email && this.user.name.trim() !== '' && this.user.email.trim() !== '') {
+          this.isGuest = false;
+          return;
         }
-
-        // Se chegou aqui, user tá válido – sem fallback pra convidado
-        return;
       } catch (parseErr) {
         console.error('Erro parseando user JSON:', parseErr);
-        localStorage.removeItem('user');  // <<< Limpa corrompido
       }
     }
 
-    // Fallback/Erro: Sem user válido
-    console.error('Nenhum user válido em localStorage. Forçando login.');
-    this.user = { name: '', email: '' };  // <<< Define como empty pra triggerar redirect no ngOnInit
-    throw new Error('Usuário não encontrado no localStorage');  // Não usa fallback "Convidado" – força login
+    // Modo visitante (conta fantasma)
+    console.log('Modo visitante ativado');
+    this.isGuest = true;
+    this.user = { 
+      name: 'Futuro Cliente', 
+      email: 'Faça login para agendar',
+      id: null 
+    };
   }
 
   logout(): void {
@@ -202,8 +191,9 @@ export class HubComponent implements OnInit {
     this.error = '';
     this.api.getCompanies('').pipe(timeout(10000)).subscribe({
       next: (response: ApiResponse<any[]>) => {
-        if (response.success !== false) {
-          const data = response.data || [];
+        // Back-end retorna ApiResponse com success: true
+        if (response.success === true && response.data) {
+          const data = response.data;
           this.companies = data;
           this.filteredCompanies = [...this.companies];
           console.log('Empresas carregadas:', this.companies.length, 'itens');
@@ -339,17 +329,50 @@ export class HubComponent implements OnInit {
     this.applyFiltersWithLoading();
   }
 
-  // ATUALIZADO: Abre modal de agendamento (sem Material, usa flag)
-  // <<< FIX: MUDE pra receber company full (do *ngFor), não só Id
-  schedule(company: any): void {  // <<< FIX: Recebe company objeto
-    const companyId = company.id;  // <<< FIX: Extrai Id do objeto
-    console.log('[Hub] Schedule chamado pra company:', company.name, 'ID:', companyId);  // <<< FIX: Log pra debug (deve ser 1)
+  // Abre modal de agendamento (verifica se está logado)
+  schedule(company: any): void {
+    const companyId = company.id;
+    console.log('[Hub] Schedule chamado pra company:', company.name, 'ID:', companyId, '| isGuest:', this.isGuest);
+    
     if (!companyId) {
       console.warn('ID da empresa inválido');
       return;
     }
+
+    // Se for visitante, mostra modal de login
+    if (this.isGuest) {
+      this.selectedCompanyId = companyId;
+      this.showLoginModal = true;
+      return;
+    }
+
     this.selectedCompanyId = companyId;
-    this.showModal = true; // Abre modal
+    this.showModal = true;
+  }
+
+  // Fecha modal de login e redireciona
+  closeLoginModal(): void {
+    this.showLoginModal = false;
+    this.selectedCompanyId = null;
+  }
+
+  // Redireciona para login
+  goToLogin(): void {
+    this.router.navigate(['/login'], { queryParams: { returnUrl: '/hub' } });
+  }
+
+  // Redireciona para registro
+  goToRegister(): void {
+    this.router.navigate(['/register'], { queryParams: { returnUrl: '/hub' } });
+  }
+
+  // Navega para conta ou login
+  goToAccount(): void {
+    if (this.isGuest) {
+      this.router.navigate(['/login'], { queryParams: { returnUrl: '/hub' } });
+    } else {
+      this.router.navigate(['/account']);
+    }
   }
 
   // Método pra fechar modal (chamado do modal)

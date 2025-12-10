@@ -1,189 +1,380 @@
-<div class="relative">
-  <div class="absolute inset-0 bg-gradient-to-br from-pink-50/50 to-white/50 rounded-xl"></div>
-  <div class="relative z-10">
-    <div class="mb-6 flex justify-between items-center">
-      <h2 class="text-2xl font-semibold text-gray-800">Agenda {{ selectedView === 'week' ? 'Semanal' : selectedView === 'day' ? 'Diária' : 'Mensal' }}</h2>
-      <div class="flex space-x-3">
-        <select [(ngModel)]="selectedView" (change)="onViewChange()" class="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 text-sm bg-white">
-          <option value="week">Semana</option>
-          <option value="day">Dia</option>
-          <option value="month">Mês</option>
-        </select>
-        <button (click)="exportCalendar()" class="px-4 py-2 bg-pink-500 text-white rounded-full hover:bg-pink-600 transition-all duration-300 shadow-md text-sm">
-          Exportar PDF
+<div class="space-y-6">
+  <!-- Header com navegação -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Agenda do Dia</h2>
+      <p class="text-sm text-gray-500">Grade de horários por funcionário</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button 
+        *ngIf="!isToday"
+        (click)="goToToday()" 
+        class="px-3 py-2 text-sm bg-pink-100 text-pink-600 rounded-lg hover:bg-pink-200 transition-colors font-medium">
+        Hoje
+      </button>
+      <button (click)="exportCalendar()" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+        📄 PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Navegação de data -->
+  <div id="calendar-section" class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+    <!-- Header rosa com data -->
+    <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4">
+      <div class="flex items-center justify-center gap-4">
+        <button 
+          (click)="prevDay()" 
+          class="p-2 rounded-full hover:bg-white/20 transition-all active:scale-95">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </button>
+        <div class="text-center">
+          <span class="text-lg sm:text-xl font-semibold capitalize">{{ formattedDate }}</span>
+          <span *ngIf="isToday" class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">Hoje</span>
+        </div>
+        <button 
+          (click)="nextDay()" 
+          class="p-2 rounded-full hover:bg-white/20 transition-all active:scale-95">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
         </button>
       </div>
     </div>
 
-    <!-- Loading Spinner -->
-    <div *ngIf="loading" class="flex justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+    <!-- Loading -->
+    <div *ngIf="loading" class="flex justify-center items-center py-20">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-500"></div>
     </div>
 
-    <!-- Week View -->
-    <div *ngIf="selectedView === 'week' && !loading" id="calendar-section" class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-      <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 flex justify-between items-center">
-        <div class="flex items-center space-x-2">
-          <button (click)="prevWeek()" class="p-2 rounded-full hover:bg-white/20 transition-all">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <span class="text-lg font-semibold">{{ weekTitle }}</span>
-          <button (click)="nextWeek()" class="p-2 rounded-full hover:bg-white/20 transition-all">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-          </button>
+    <!-- Grade de horários -->
+    <div *ngIf="!loading" class="overflow-x-auto">
+      <!-- Sem funcionários -->
+      <div *ngIf="employees.length === 0" class="text-center py-16 px-4">
+        <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+          <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+          </svg>
         </div>
-        <span class="text-sm opacity-90">Hoje: <span class="font-medium">{{ todayDate }}</span></span>
+        <h3 class="text-lg font-semibold text-gray-700 mb-1">Nenhum funcionário cadastrado</h3>
+        <p class="text-sm text-gray-500">Cadastre funcionários na aba "Funcionários" para visualizar a agenda.</p>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full table-fixed">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="w-20 p-3 text-left font-medium text-gray-600 border-r border-gray-200">Hora</th>
-              <th *ngFor="let day of weekDays" [class]="day.isToday ? 'bg-yellow-50 border-2 border-yellow-200' : ''" class="p-3 text-center font-medium text-gray-700 relative">
-                {{ day.label }}<br>
-                <small class="text-xs text-gray-500 block">{{ day.date }}</small>
-                <div *ngIf="day.appointmentsCount > 0" class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 text-white rounded-full text-xs flex items-center justify-center">
-                  {{ day.appointmentsCount }}
+
+      <!-- Tabela da grade -->
+      <table *ngIf="employees.length > 0" class="w-full min-w-[600px]">
+        <thead>
+          <tr class="bg-gray-50 border-b border-gray-200">
+            <th class="w-20 sm:w-24 p-3 text-left text-xs sm:text-sm font-semibold text-gray-600 sticky left-0 bg-gray-50 z-10">
+              Horário
+            </th>
+            <th 
+              *ngFor="let emp of employees" 
+              class="p-3 text-center min-w-[140px] sm:min-w-[160px]">
+              <div class="flex flex-col items-center gap-1">
+                <div 
+                  *ngIf="!emp.avatarUrl"
+                  [class]="'w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ' + getAvatarColor(emp.name)">
+                  {{ getInitials(emp.name) }}
                 </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let hour of hours" class="border-t border-gray-100 hover:bg-gray-50/50 transition-all">
-              <td class="w-20 p-3 text-sm font-medium text-gray-600 bg-gray-50 border-r border-gray-200 whitespace-nowrap">{{ hour }}</td>
-              <td *ngFor="let day of weekDays" [class]="day.isToday ? 'bg-yellow-50/80' : ''" class="p-2 min-h-[60px] relative border-r border-gray-100 last:border-r-0">
-                <div *ngFor="let appt of getAppointmentsForDayHour(day.date, hour)" class="mb-1 p-2 rounded-lg text-xs shadow-sm transition-all hover:scale-105" [ngClass]="{
-                  'bg-green-100 text-green-800 border border-green-200': appt.status === 'Confirmed' || appt.status === 'Scheduled',
-                  'bg-red-100 text-red-800 border border-red-200': appt.status === 'Cancelled',
-                  'bg-pink-100 text-pink-800 border border-pink-200': appt.status === 'Available'
-                }">
-                  <div class="font-medium">{{ appt.service?.name || 'Sem serviço' }}</div>
-                  <div class="text-gray-600">por {{ appt.employee?.name || 'Sem prestador' }}</div>
-                  <div class="flex items-center justify-between mt-1">
-                    <span class="text-xs">{{ appt.service?.duration || 0 }}min • R$ {{ appt.service?.price || 0 }}</span>
-                    <span class="text-xs px-1 py-0.5 rounded-full bg-white/50" [ngClass]="{
-                      'text-green-600': appt.status === 'Confirmed' || appt.status === 'Scheduled',
-                      'text-red-600': appt.status === 'Cancelled',
-                      'text-gray-600': appt.status === 'Available'
-                    }">{{ getStatusIcon(appt.status) }}</span>
+                <img 
+                  *ngIf="emp.avatarUrl" 
+                  [src]="emp.avatarUrl" 
+                  [alt]="emp.name"
+                  class="w-10 h-10 rounded-full object-cover">
+                <span class="text-xs sm:text-sm font-medium text-gray-700 truncate max-w-[120px]">{{ emp.name }}</span>
+                <span *ngIf="emp.role" class="text-[10px] text-gray-400">{{ emp.role }}</span>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let hour of hours; let i = index" class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+            <!-- Coluna de horário -->
+            <td class="p-2 sm:p-3 text-xs sm:text-sm font-medium text-gray-500 bg-gray-50/80 sticky left-0 z-10 border-r border-gray-200">
+              {{ hour }}
+            </td>
+            
+            <!-- Colunas de funcionários -->
+            <ng-container *ngFor="let emp of employees">
+              <!-- Agendamento que COMEÇA neste slot (renderiza com rowspan) -->
+              <td 
+                *ngIf="getAppointmentStartingAtSlot(emp.id, hour) as appt"
+                [attr.rowspan]="getSlotSpan(appt)"
+                class="p-1.5 sm:p-2 align-top border-r border-gray-100 last:border-r-0">
+                <div 
+                  [class]="'relative p-2 rounded-lg border-l-4 shadow-sm cursor-pointer group transition-all hover:shadow-md h-full flex flex-col justify-between ' + getStatusColor(appt.status)"
+                  (click)="openDetailsModal(appt, $event)"
+                  [title]="'Clique para ver detalhes - ' + getServiceName(appt)">
+                  
+                  <!-- Conteúdo do card -->
+                  <div class="space-y-0.5 flex-1">
+                    <div class="font-semibold text-[11px] sm:text-xs truncate">
+                      {{ getServiceName(appt) }}
+                    </div>
+                    <div class="flex items-center gap-1 text-[10px] sm:text-[11px] opacity-80">
+                      <span>⏱️ {{ getServiceDuration(appt) }}min</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] sm:text-[11px]">
+                      <span class="font-medium">R$ {{ getServicePrice(appt) }}</span>
+                      <span>{{ getStatusIcon(appt.status) }}</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Indicador de clique -->
+                  <div class="text-[9px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+                    Clique para detalhes
                   </div>
                 </div>
-                <div *ngIf="getAppointmentsForDayHour(day.date, hour).length === 0" class="text-xs text-gray-400 text-center py-2">Livre</div>
               </td>
-            </tr>
-          </tbody>
-        </table>
+
+              <!-- Slot ocupado por agendamento (mas não é o início - já renderizado com rowspan) -->
+              <td 
+                *ngIf="!getAppointmentStartingAtSlot(emp.id, hour) && isSlotOccupiedByAppointment(emp.id, hour)"
+                class="p-1.5 sm:p-2 align-top border-r border-gray-100 last:border-r-0">
+                <!-- Vazio - já está coberto pelo rowspan do slot anterior -->
+              </td>
+
+              <!-- Slot vazio -->
+              <td 
+                *ngIf="!getAppointmentStartingAtSlot(emp.id, hour) && !isSlotOccupiedByAppointment(emp.id, hour)"
+                class="p-1.5 sm:p-2 align-top border-r border-gray-100 last:border-r-0 h-[70px] sm:h-[80px]">
+                <div class="h-full rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
+                  <span class="text-[10px] text-gray-300">—</span>
+                </div>
+              </td>
+            </ng-container>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Debug: Lista de agendamentos (temporário) -->
+  <div *ngIf="!loading && allAppointments.length > 0" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
+    <h3 class="text-sm font-semibold text-yellow-800 mb-2">🔍 Debug - Agendamentos do dia ({{ allAppointments.length }})</h3>
+    <div class="space-y-2 text-xs">
+      <div *ngFor="let appt of allAppointments" class="bg-white p-2 rounded border">
+        <strong>{{ getServiceName(appt) }}</strong> - 
+        Funcionário: {{ appt.employee?.name || 'N/A' }} (ID: {{ appt.employee?.id || 'N/A' }}) - 
+        Horário: {{ appt.dateTime | date:'HH:mm' }} - 
+        Status: {{ appt.status }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Cards de métricas -->
+  <div *ngIf="!loading && employees.length > 0" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <!-- Total de agendamentos -->
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
+          <span class="text-lg">📅</span>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500">Agendamentos</p>
+          <p class="text-xl font-bold text-gray-800">{{ dayMetrics.totalAppointments }}</p>
+        </div>
       </div>
     </div>
 
-    <!-- Day View -->
-    <div *ngIf="selectedView === 'day' && !loading" id="calendar-section" class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-      <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 flex justify-between items-center">
-        <div class="flex items-center space-x-2">
-          <button (click)="prevDay()" class="p-2 rounded-full hover:bg-white/20 transition-all">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <span class="text-lg font-semibold">{{ selectedDate | date:'EEEE, dd/MM/yyyy' }}</span>
-          <button (click)="nextDay()" class="p-2 rounded-full hover:bg-white/20 transition-all">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+    <!-- Faturamento do dia -->
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+          <span class="text-lg">💰</span>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500">Faturamento</p>
+          <p class="text-xl font-bold text-emerald-600">R$ {{ dayMetrics.totalRevenue.toFixed(2) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Serviço mais popular -->
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+          <span class="text-lg">🏆</span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs text-gray-500">Top Serviço</p>
+          <p *ngIf="dayMetrics.topService" class="text-sm font-bold text-gray-800 truncate">
+            {{ dayMetrics.topService.name }}
+          </p>
+          <p *ngIf="dayMetrics.topService" class="text-[10px] text-gray-400">
+            {{ dayMetrics.topService.count }}x hoje
+          </p>
+          <p *ngIf="!dayMetrics.topService" class="text-sm text-gray-400">—</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Funcionário destaque -->
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+          <span class="text-lg">⭐</span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs text-gray-500">Destaque</p>
+          <p *ngIf="dayMetrics.topEmployee" class="text-sm font-bold text-gray-800 truncate">
+            {{ dayMetrics.topEmployee.name }}
+          </p>
+          <p *ngIf="dayMetrics.topEmployee" class="text-[10px] text-gray-400">
+            {{ dayMetrics.topEmployee.count }} atend.
+          </p>
+          <p *ngIf="!dayMetrics.topEmployee" class="text-sm text-gray-400">—</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty state geral -->
+  <div *ngIf="!loading && employees.length > 0 && allAppointments.length === 0" class="bg-white/80 rounded-xl p-8 text-center border border-gray-100">
+    <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+      <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+      </svg>
+    </div>
+    <h3 class="text-lg font-semibold text-gray-700 mb-1">Nenhum agendamento</h3>
+    <p class="text-sm text-gray-500">Não há agendamentos para este dia.</p>
+  </div>
+
+  <!-- Modal de Detalhes do Agendamento -->
+  <div 
+    *ngIf="showDetailsModal && selectedAppointment"
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    (click)="closeDetailsModal()">
+    <div 
+      class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+      (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 rounded-t-2xl">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-bold">Detalhes do Agendamento</h3>
+          <button 
+            (click)="closeDetailsModal()"
+            class="p-1 rounded-full hover:bg-white/20 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
         </div>
       </div>
-      <div class="p-6">
-        <div *ngIf="dayAppointments.length === 0" class="text-center text-gray-500 py-12">
-          <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          Nenhum agendamento hoje. Crie serviços e horários!
+
+      <!-- Conteúdo -->
+      <div class="p-6 space-y-4">
+        <!-- Status -->
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">{{ getStatusIcon(selectedAppointment.status) }}</span>
+          <span [class]="'px-3 py-1 rounded-full text-sm font-semibold ' + getStatusColor(selectedAppointment.status)">
+            {{ selectedAppointment.status === 'Scheduled' ? 'Agendado' : selectedAppointment.status === 'Confirmed' ? 'Confirmado' : 'Cancelado' }}
+          </span>
         </div>
-        <div *ngFor="let appt of dayAppointments" class="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-          <div class="flex justify-between items-start">
-            <div>
-              <h4 class="font-semibold text-gray-800">{{ appt.service?.name }}</h4>
-              <p class="text-sm text-gray-600">{{ appt.dateTime | date:'HH:mm' }} • {{ appt.employee?.name }}</p>
-              <span class="inline-block px-2 py-1 text-xs rounded-full mt-1" [ngClass]="{
-                'bg-green-100 text-green-800': getStatusClass(appt.status)['bg-green-100'],
-                'bg-red-100 text-red-800': getStatusClass(appt.status)['bg-red-100'],
-                'bg-gray-100 text-gray-800': true
-              }">{{ appt.status }}</span>
+
+        <!-- Serviços -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Serviços</h4>
+          <div class="space-y-2">
+            <div *ngIf="selectedAppointment.services && selectedAppointment.services.length > 0" class="space-y-2">
+              <div 
+                *ngFor="let service of selectedAppointment.services"
+                class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div class="font-medium text-gray-800">{{ service.name }}</div>
+                <div class="text-xs text-gray-500 mt-1">
+                  Duração: {{ service.duration }}min • Preço: R$ {{ (service.price || 0).toFixed(2).replace('.', ',') }}
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!selectedAppointment.services || selectedAppointment.services.length === 0" class="text-gray-500 text-sm">
+              {{ getServiceName(selectedAppointment) }}
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Month View -->
-    <div *ngIf="selectedView === 'month' && !loading" id="calendar-section" class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-      <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 flex justify-between items-center">
-        <div class="flex items-center space-x-2">
-          <button (click)="prevMonth()" class="p-2 rounded-full hover:bg-white/20 transition-all">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <span class="text-lg font-semibold">{{ monthTitle }}</span>
-          <button (click)="nextMonth()" class="p-2 rounded-full hover:bg-white/20 transition-all">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-          </button>
+        <!-- Profissional -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Profissional</h4>
+          <div class="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+            <div 
+              *ngIf="!selectedAppointment.employee?.fullPhotoUrl"
+              [class]="'w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ' + getAvatarColor(selectedAppointment.employee?.name || '')">
+              {{ getInitials(selectedAppointment.employee?.name || 'N/A') }}
+            </div>
+            <img 
+              *ngIf="selectedAppointment.employee?.fullPhotoUrl"
+              [src]="selectedAppointment.employee!.fullPhotoUrl"
+              [alt]="selectedAppointment.employee!.name || 'Profissional'"
+              class="w-12 h-12 rounded-full object-cover">
+            <div>
+              <div class="font-medium text-gray-800">{{ selectedAppointment.employee?.name || 'N/A' }}</div>
+              <div class="text-xs text-gray-500">{{ selectedAppointment.employee?.roleName || 'Profissional' }}</div>
+            </div>
+          </div>
         </div>
-        <span class="text-sm opacity-90">Total: {{ monthAppointments.length }} agendamentos</span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-max">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="p-3 text-left font-medium text-gray-600">Data</th>
-              <th class="p-3 text-left font-medium text-gray-600">Horário</th>
-              <th class="p-3 text-left font-medium text-gray-600">Serviço</th>
-              <th class="p-3 text-left font-medium text-gray-600">Funcionário</th>
-              <th class="p-3 text-left font-medium text-gray-600">Status</th>
-              <th class="p-3 text-left font-medium text-gray-600 w-20">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let appt of monthAppointments" class="border-t border-gray-100 hover:bg-gray-50/50 transition-all">
-              <td class="p-3 text-sm">{{ appt.dateTime | date:'dd/MM/yyyy' }}</td>
-              <td class="p-3 text-sm">{{ appt.dateTime | date:'HH:mm' }} ({{ appt.service?.duration || 0 }}min)</td>
-              <td class="p-3 text-sm font-medium">{{ appt.service?.name || 'Sem serviço' }}</td>
-              <td class="p-3 text-sm">{{ appt.employee?.name || 'Sem prestador' }}</td>
-              <td class="p-3">
-                <span class="inline-flex px-2 py-1 text-xs rounded-full font-medium" [ngClass]="getStatusClass(appt.status)">
-                  {{ appt.status }} {{ getStatusIcon(appt.status) }}
-                </span>
-              </td>
-              <td class="p-3">
-                <!-- Botão de cancelar removido -->
-              </td>
-            </tr>
-            <tr *ngIf="monthAppointments.length === 0">
-              <td colspan="6" class="p-12 text-center text-gray-500">
-                <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Nenhum agendamento no mês. Crie serviços e horários!
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
 
-    <!-- Empty State Geral -->
-    <div *ngIf="!loading && allAppointments.length === 0" class="text-center text-gray-500 py-12 bg-white/80 rounded-xl backdrop-blur-sm">
-      <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-      </svg>
-      Nenhum agendamento no período selecionado. Crie serviços e horários!
+        <!-- Cliente -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Cliente</h4>
+          <div class="bg-gray-50 rounded-lg p-3">
+            <div *ngIf="selectedAppointment.client" class="space-y-1">
+              <div class="font-medium text-gray-800">{{ selectedAppointment.client.name || 'Cliente' }}</div>
+              <div class="text-xs text-gray-500" *ngIf="selectedAppointment.client.email">
+                {{ selectedAppointment.client.email }}
+              </div>
+              <div class="text-xs text-gray-500" *ngIf="selectedAppointment.client.phone">
+                {{ selectedAppointment.client.phone }}
+              </div>
+            </div>
+            <div *ngIf="!selectedAppointment.client" class="text-gray-500 italic">
+              <span *ngIf="selectedAppointment.clientId && selectedAppointment.clientId > 0">
+                ID: {{ selectedAppointment.clientId }} (dados não disponíveis)
+              </span>
+              <span *ngIf="!selectedAppointment.clientId || selectedAppointment.clientId === 0">
+                Visitante (não cadastrado)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Horário -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Horário</h4>
+          <div class="bg-gray-50 rounded-lg p-3 space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500 text-sm">Início:</span>
+              <span class="font-medium text-gray-800">{{ selectedAppointment.dateTime | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500 text-sm">Duração:</span>
+              <span class="font-medium text-gray-800">{{ getServiceDuration(selectedAppointment) }} minutos</span>
+            </div>
+            <div class="flex items-center gap-2" *ngIf="selectedAppointment.endDateTime">
+              <span class="text-gray-500 text-sm">Término:</span>
+              <span class="font-medium text-gray-800">{{ selectedAppointment.endDateTime | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Valor Total -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Valor Total</h4>
+          <div class="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+            <div class="text-2xl font-bold text-emerald-600">R$ {{ getServicePrice(selectedAppointment) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 border-t border-gray-200 flex justify-end">
+        <button 
+          (click)="closeDetailsModal()"
+          class="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors font-medium">
+          Fechar
+        </button>
+      </div>
     </div>
   </div>
 </div>

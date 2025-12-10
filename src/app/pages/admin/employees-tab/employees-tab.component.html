@@ -1,8 +1,8 @@
-<div class="flex justify-between items-center mb-6">
-  <h2 class="text-2xl font-semibold text-gray-800">Gerenciar Funcionários</h2>
-  <div class="flex space-x-3">
-    <button (click)="openRoleModal()" class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all duration-300 shadow-md">+ Adicionar Cargo</button>
-    <button (click)="openEmployeeForm()" class="px-6 py-3 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition-all duration-300 shadow-md">+ Adicionar Funcionário</button>
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+  <h2 class="text-lg sm:text-2xl font-semibold text-gray-800">Gerenciar Funcionários</h2>
+  <div class="flex flex-col xs:flex-row w-full sm:w-auto space-y-2 xs:space-y-0 xs:space-x-3">
+    <button (click)="openRoleModal()" class="w-full xs:w-auto px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all duration-300 shadow-md text-xs sm:text-sm">+ Cargo</button>
+    <button (click)="openEmployeeForm()" class="w-full xs:w-auto px-3 sm:px-6 py-2 sm:py-3 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition-all duration-300 shadow-md text-xs sm:text-base">+ Funcionário</button>
   </div>
 </div>
 <div *ngIf="error" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-xl text-center">{{ error }}</div>
@@ -64,28 +64,28 @@
     </div>
   </form>
 </div>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
   <!-- Tabela Cargos -->
-  <div class="bg-white rounded-xl shadow-lg p-4">
-    <h3 class="text-lg font-semibold mb-4 text-gray-800">Cargos</h3>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm text-left text-gray-600">
+  <div class="bg-white rounded-xl shadow-lg p-3 sm:p-4">
+    <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-800">Cargos</h3>
+    <div class="overflow-x-auto -mx-3 sm:mx-0">
+      <table class="w-full text-xs sm:text-sm text-left text-gray-600 min-w-[280px]">
         <thead class="bg-gray-50">
           <tr>
-            <th class="px-4 py-3 font-semibold">Nome</th>
-            <th class="px-4 py-3 font-semibold">Status</th>
-            <th class="px-4 py-3 font-semibold">Ações</th>
+            <th class="px-3 sm:px-4 py-2 sm:py-3 font-semibold">Nome</th>
+            <th class="px-3 sm:px-4 py-2 sm:py-3 font-semibold">Status</th>
+            <th class="px-3 sm:px-4 py-2 sm:py-3 font-semibold">Ações</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let role of roles; trackBy: trackById" class="border-b hover:bg-gray-50 transition-all">
-            <td class="px-4 py-3 font-medium text-gray-900">{{ role.name }}</td>
-            <td class="px-4 py-3">
-              <span class="inline-block px-2 py-1 text-xs rounded-full" [ngClass]="role.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+            <td class="px-3 sm:px-4 py-2 sm:py-3 font-medium text-gray-900">{{ role.name }}</td>
+            <td class="px-3 sm:px-4 py-2 sm:py-3">
+              <span class="inline-block px-2 py-1 text-[10px] sm:text-xs rounded-full" [ngClass]="role.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
                 {{ role.active ? 'Ativo' : 'Inativo' }}
               </span>
             </td>
-            <td class="px-4 py-3">
+            <td class="px-3 sm:px-4 py-2 sm:py-3">
               <button (click)="openRoleModal(role.id)" class="p-1 text-yellow-500 hover:text-yellow-600">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -96,56 +96,62 @@
         </tbody>
       </table>
     </div>
-    <p *ngIf="roles.length === 0" class="text-center text-gray-500 py-4 text-sm">Nenhum cargo cadastrado.</p>
+    <p *ngIf="roles.length === 0" class="text-center text-gray-500 py-3 sm:py-4 text-xs sm:text-sm">Nenhum cargo cadastrado.</p>
   </div>
   <!-- Tabela Funcionários -->
-  <div class="bg-white rounded-xl shadow-lg p-4">
-    <h3 class="text-lg font-semibold mb-4 text-gray-800">Funcionários</h3>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm text-left text-gray-600">
+  <div class="bg-white rounded-xl shadow-lg p-3 sm:p-4">
+    <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-800">Funcionários</h3>
+    <div class="overflow-x-auto -mx-3 sm:mx-0">
+      <table class="w-full text-xs sm:text-sm text-left text-gray-600 min-w-[450px]">
         <thead class="bg-gray-50">
           <tr>
-            <th class="px-4 py-3 font-semibold">Nome</th>
-            <th class="px-4 py-3 font-semibold">E-mail</th>
-            <th class="px-4 py-3 font-semibold">Cargo</th>
-            <th class="px-4 py-3 font-semibold">Verificado</th>
-            <th class="px-4 py-3 font-semibold">Ações</th>
+            <th class="px-2 sm:px-4 py-2 sm:py-3 font-semibold">Nome</th>
+            <th class="px-2 sm:px-4 py-2 sm:py-3 font-semibold hidden sm:table-cell">E-mail</th>
+            <th class="px-2 sm:px-4 py-2 sm:py-3 font-semibold">Cargo</th>
+            <th class="px-2 sm:px-4 py-2 sm:py-3 font-semibold">Status</th>
+            <th class="px-2 sm:px-4 py-2 sm:py-3 font-semibold">Ações</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let emp of employees; trackBy: trackById" class="border-b hover:bg-gray-50 transition-all">
-            <td class="px-4 py-3">
-              <div class="flex items-center space-x-3">
+            <td class="px-2 sm:px-4 py-2 sm:py-3">
+              <div class="flex items-center space-x-2 sm:space-x-3">
                 <!-- Atualizado: Usa fullPhotoUrl com placeholder seguro -->
-                <img [src]="emp.fullPhotoUrl || 'https://via.placeholder.com/150x150/cccccc/666666?text=Sem+Foto'" [alt]="emp.name" class="h-10 w-10 rounded-full object-cover shadow-sm flex-shrink-0">
-                <span class="font-medium text-gray-900">{{ emp.name }}</span>
+                <img [src]="emp.fullPhotoUrl || 'https://via.placeholder.com/150x150/cccccc/666666?text=Sem+Foto'" [alt]="emp.name" class="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover shadow-sm flex-shrink-0">
+                <span class="font-medium text-gray-900 truncate max-w-[80px] sm:max-w-none">{{ emp.name }}</span>
               </div>
             </td>
-            <td class="px-4 py-3">{{ emp.email }}</td>
-            <td class="px-4 py-3">{{ emp.roleName || emp.role?.name || 'Sem cargo' }}</td>
-            <td class="px-4 py-3">
-              <span class="text-xs" [ngClass]="emp.emailVerified ? 'text-green-600' : 'text-yellow-600'">
-                {{ emp.emailVerified ? 'Verificado' : 'Pendente' }}
+            <td class="px-2 sm:px-4 py-2 sm:py-3 hidden sm:table-cell truncate max-w-[150px]">{{ emp.email }}</td>
+            <td class="px-2 sm:px-4 py-2 sm:py-3 truncate">{{ emp.roleName || emp.role?.name || 'Sem cargo' }}</td>
+            <td class="px-2 sm:px-4 py-2 sm:py-3">
+              <span class="text-[10px] sm:text-xs" [ngClass]="emp.emailVerified ? 'text-green-600' : 'text-yellow-600'">
+                {{ emp.emailVerified ? '✓' : '⏳' }}
               </span>
             </td>
-            <td class="px-4 py-3">
-              <button *ngIf="!emp.emailVerified" (click)="sendVerificationEmail(emp.id)" class="mr-2 p-1 text-blue-500 hover:text-blue-600 text-xs">Reenviar</button>
-              <button (click)="openEmployeeForm(emp.id)" class="mr-2 p-1 text-yellow-500 hover:text-yellow-600">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-              </button>
-              <button (click)="deleteEmployee(emp.id)" class="p-1 text-red-500 hover:text-red-600">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2.25 2.25 0 0116.138 21H7.862a2.25 2.25 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-              </button>
+            <td class="px-2 sm:px-4 py-2 sm:py-3">
+              <div class="flex items-center space-x-1">
+                <button *ngIf="!emp.emailVerified" (click)="sendVerificationEmail(emp.id)" class="p-1 text-blue-500 hover:text-blue-600 text-[10px] sm:text-xs" title="Reenviar">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                </button>
+                <button (click)="openEmployeeForm(emp.id)" class="p-1 text-yellow-500 hover:text-yellow-600">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                </button>
+                <button (click)="deleteEmployee(emp.id)" class="p-1 text-red-500 hover:text-red-600">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2.25 2.25 0 0116.138 21H7.862a2.25 2.25 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p *ngIf="employees.length === 0" class="text-center text-gray-500 py-4 text-sm">Nenhum funcionário cadastrado.</p>
+    <p *ngIf="employees.length === 0" class="text-center text-gray-500 py-3 sm:py-4 text-xs sm:text-sm">Nenhum funcionário cadastrado.</p>
   </div>
 </div>
 <app-role-modal *ngIf="showRoleModal" [editingId]="editingId" [editingRole]="editingRole" (save)="onSaveRole($event)" (close)="showRoleModal = false"></app-role-modal>

@@ -6,6 +6,7 @@
   background: #ec4899;
   cursor: pointer;
 }
+
 .slider::-moz-range-thumb {
   height: 20px;
   width: 20px;
@@ -14,9 +15,11 @@
   cursor: pointer;
   border: none;
 }
+
 .tooltip {
   position: relative;
 }
+
 .tooltip::after {
   content: attr(title);
   position: absolute;
@@ -33,44 +36,28 @@
   transition: opacity 0.3s;
   z-index: 10;
 }
+
 .tooltip:hover::after {
   opacity: 1;
 }
-.slider::-webkit-slider-thumb {
-  appearance: none;
-  height: 20px;
-  width: 20px;
-  border-radius: 50%;
-  background: #ec4899;
-  cursor: pointer;
+
+/* Animação para modal de login */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
-.slider::-moz-range-thumb {
-  height: 20px;
-  width: 20px;
-  border-radius: 50%;
-  background: #ec4899;
-  cursor: pointer;
-  border: none;
-}
-.tooltip {
-  position: relative;
-}
-.tooltip::after {
-  content: attr(title);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #333;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s;
-  z-index: 10;
-}
-.tooltip:hover::after {
-  opacity: 1;
+
+/* Mobile filters fix - garante que inputs fiquem acima do overlay */
+@media (max-width: 768px) {
+  /* Força os inputs a serem interativos */
+  input, select, button {
+    position: relative;
+    z-index: 1;
+  }
 }

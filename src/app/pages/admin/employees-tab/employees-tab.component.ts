@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angula
 import { ApiService } from '../../../services/api.service';
 import { RoleModalComponent } from '../modals/role-modal/role-modal.component';
 import { ToastService } from '../../../services/toast.service';
+import { ConfirmService } from '../../../services/confirm.service';
 import { jwtDecode } from 'jwt-decode';
 
 interface Employee {
@@ -53,7 +54,8 @@ export class EmployeesTabComponent {
     private fb: FormBuilder,
     private api: ApiService,
     private cdr: ChangeDetectorRef,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private confirmService: ConfirmService
   ) {
     this.employeeForm = this.fb.group({
       name: ['', Validators.required],
@@ -185,7 +187,7 @@ export class EmployeesTabComponent {
     }
    
     if (this.editingId) {
-      payload.append('Id', this.editingId.toString());
+      // Id vem na rota, não no FormData
       this.api.updateEmployee(this.editingId, payload).subscribe({
         next: (response) => {
           if (response.success && response.data) {
@@ -327,18 +329,30 @@ export class EmployeesTabComponent {
     });
   }
 
-  deleteEmployee(id: number): void {
-    if (confirm('Tem certeza?')) {
+  async deleteEmployee(id: number): Promise<void> {
+    const confirmed = await this.confirmService.danger(
+      'Tem certeza que deseja excluir este funcionário?',
+      'Excluir Funcionário'
+    );
+    
+    if (confirmed) {
       this.api.deleteEmployee(id).subscribe({
         next: (response) => {
           if (response.success === true) {
             this.employeeSaved.emit({ id } as Employee);
             this.toastService.show('Funcionário deletado com sucesso!', 'success');
+          } else {
+            // Backend retornou success: false
+            const msg = response.message || 'Não foi possível excluir o funcionário.';
+            this.toastService.show(msg, 'error');
           }
         },
         error: (err) => {
-          this.error = 'Erro ao excluir: ' + err.message;
-          this.toastService.show('Falha ao deletar funcionário.', 'error');
+          // Tenta extrair mensagem do backend
+          const backendMsg = err.error?.message || err.error?.Message || err.error?.title;
+          const errorMsg = backendMsg || 'Não foi possível excluir. O funcionário pode ter agendamentos vinculados.';
+          this.error = errorMsg;
+          this.toastService.show(errorMsg, 'error');
         }
       });
     }

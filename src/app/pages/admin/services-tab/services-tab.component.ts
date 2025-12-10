@@ -1,9 +1,10 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormGroup, FormBuilder, Validators, AbstractControl } from '@angular/forms';
-import { ApiService, Service } from '../../../services/api.service';  // Import Service
+import { ApiService, Service } from '../../../services/api.service';
 import { ServiceModalComponent } from '../modals/service-modal/service-modal.component';
 import { ToastService } from '../../../services/toast.service';
+import { ConfirmService } from '../../../services/confirm.service';
 
 @Component({
   selector: 'app-services-tab',
@@ -23,7 +24,13 @@ export class ServicesTabComponent {
   serviceForm: FormGroup;
   submittedService = false;
   error = '';
-  constructor(private fb: FormBuilder, private api: ApiService, private cdr: ChangeDetectorRef, private toastService: ToastService) {
+  constructor(
+    private fb: FormBuilder, 
+    private api: ApiService, 
+    private cdr: ChangeDetectorRef, 
+    private toastService: ToastService,
+    private confirmService: ConfirmService
+  ) {
     this.serviceForm = this.fb.group({
       name: ['', Validators.required],
       hours: [0, [Validators.required, Validators.min(0), Validators.max(24)]],
@@ -104,8 +111,12 @@ export class ServicesTabComponent {
     });
   }
 
-  deleteService(id: number): void {
-    if (confirm('Tem certeza?')) {
+  async deleteService(id: number): Promise<void> {
+    const confirmed = await this.confirmService.danger(
+      'Tem certeza que deseja excluir este serviço?',
+      'Excluir Serviço'
+    );
+    if (confirmed) {
       this.serviceDeleted.emit(id);
     }
   }

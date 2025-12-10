@@ -8,17 +8,19 @@ import { VerifyEmailComponent } from './pages/verify-email/verify-email.componen
 import { AccountActivatedComponent } from './pages/account-activated/account-activated.component';
 import { ConfirmationComponent } from './pages/confirmation/confirmation.component';
 import { EmployeeActivateComponent } from './pages/employee-activate/employee-activate.component';
+import { EmployeeDashboardComponent } from './pages/employee-dashboard/employee-dashboard.component';
 import { AccountComponent } from './pages/account.component/account.component';
 import { LandingComponent } from './components/landing/landing.component';
 
 import { AuthGuard } from './guards/auth.guard';
 import { AdminGuard } from './guards/admin.guard';
+import { EmployeeGuard } from './guards/employee.guard';
 
 export const routes: Routes = [
   { path: '', component: LandingComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-  { path: 'hub', component: HubComponent, canActivate: [AuthGuard] },
+  { path: 'hub', component: HubComponent }, // Acessível sem login (modo visitante)
   { path: 'account', component: AccountComponent, canActivate: [AuthGuard] },
 
   {
@@ -29,6 +31,9 @@ export const routes: Routes = [
       { path: '', redirectTo: 'general', pathMatch: 'full' }
     ]
   },
+
+  // Rota do prestador (Employee)
+  { path: 'employee/dashboard', component: EmployeeDashboardComponent, canActivate: [EmployeeGuard] },
 
   { path: 'verify-email', component: VerifyEmailComponent },
   { path: 'confirm/:type/:id', component: ConfirmationComponent },

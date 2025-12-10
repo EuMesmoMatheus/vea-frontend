@@ -10,88 +10,128 @@
   </div>
 </div>
 <!-- FIX: Adicione *ngIf="companyForm && totalMetrics" pra evitar render sem dados -->
-<div *ngIf="!initialLoading && companyForm && totalMetrics" class="min-h-screen bg-gradient-to-br from-pink-50 to-white p-4 md:p-6">
+<div *ngIf="!initialLoading && companyForm && totalMetrics" class="min-h-screen bg-gradient-to-br from-pink-50 to-white p-2 sm:p-4 md:p-6">
   <!-- Header Hero (adicionado overflow-hidden pra imagem de capa) -->
-  <header class="mb-6 relative overflow-hidden rounded-xl shadow-lg">
+  <header class="mb-4 sm:mb-6 relative overflow-hidden rounded-xl shadow-lg">
     <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" [style.background-image]="'url(' + (companyForm.get('coverImage')?.value || 'assets/default-cover.png') + ')'">
       <div class="absolute inset-0 bg-gradient-to-t from-pink-900/60 via-transparent to-transparent"></div>
     </div>
-    <div class="relative z-10 flex items-end justify-between p-6 h-48 md:h-56">
-      <div class="flex items-end space-x-4">
+    <div class="relative z-10 flex flex-col sm:flex-row items-start sm:items-end justify-between p-3 sm:p-6 h-auto sm:h-48 md:h-56 gap-3 sm:gap-0">
+      <div class="flex items-center sm:items-end space-x-3 sm:space-x-4">
         <!-- FIX: Adicione fallback pro src da img -->
-        <img [src]="companyForm.get('logo')?.value || 'assets/vea-default-logo.png'" alt="Logo da Empresa" class="h-20 w-20 rounded-full shadow-lg border-4 border-white/80 relative z-20 -mt-10 object-cover" [attr.alt]="'Logo de ' + (companyForm.get('name')?.value || 'VEA')">
-        <div class="text-white">
-          <h1 class="text-3xl font-bold mb-1">{{ companyForm.get('name')?.value || 'VEA' }}</h1>
-          <p class="text-pink-100 text-sm font-medium">Bem-vindo de volta! Gerencie sua empresa com eficiência</p>
+        <img [src]="companyForm.get('logo')?.value || 'assets/vea-default-logo.png'" alt="Logo da Empresa" class="h-14 w-14 sm:h-20 sm:w-20 rounded-full shadow-lg border-4 border-white/80 relative z-20 object-cover flex-shrink-0" [attr.alt]="'Logo de ' + (companyForm.get('name')?.value || 'VEA')">
+        <div class="text-white min-w-0">
+          <h1 class="text-lg sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1 truncate">{{ companyForm.get('name')?.value || 'VEA' }}</h1>
+          <p class="text-pink-100 text-xs sm:text-sm font-medium hidden sm:block">Bem-vindo de volta! Gerencie sua empresa com eficiência</p>
         </div>
       </div>
       <!-- AJUSTE: Botão logout com ícone sutil -->
-      <button (click)="logout()" class="px-6 py-2 bg-pink-500 text-white rounded-full hover:bg-pink-600 transition-all duration-300 shadow-md relative z-10 flex items-center space-x-2">
+      <button (click)="logout()" class="px-3 sm:px-6 py-1.5 sm:py-2 bg-pink-500 text-white rounded-full hover:bg-pink-600 transition-all duration-300 shadow-md relative z-10 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
         </svg>
-        <span>Sair</span>
+        <span class="hidden xs:inline">Sair</span>
       </button>
     </div>
   </header>
   <!-- Overview Cards (sem mudanças, tá top) -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-    <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
-      <div class="flex items-center mb-3">
-        <svg class="w-10 h-10 text-pink-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-6">
+    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+      <div class="flex items-center mb-2 sm:mb-3">
+        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-pink-500 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
         </svg>
-        <h3 class="text-sm font-medium text-gray-600">Agendamentos Esta Semana</h3>
+        <h3 class="text-xs sm:text-sm font-medium text-gray-600">Agendamentos Esta Semana</h3>
       </div>
       <!-- FIX: Troque ?. por . (mesmo com || 0, fica seguro) -->
-      <p class="text-4xl font-bold text-pink-600 mb-1">{{ totalMetrics.appointments || 0 }}</p>
-      <p class="text-xs text-gray-500">Baseado em horários confirmados</p>
+      <p class="text-2xl sm:text-4xl font-bold text-pink-600 mb-1">{{ totalMetrics.appointments || 0 }}</p>
+      <p class="text-[10px] sm:text-xs text-gray-500">Baseado em horários confirmados</p>
     </div>
-    <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
-      <div class="flex items-center mb-3">
-        <svg class="w-10 h-10 text-pink-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+      <div class="flex items-center mb-2 sm:mb-3">
+        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-pink-500 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
         </svg>
-        <h3 class="text-sm font-medium text-gray-600">Serviços Ativos</h3>
+        <h3 class="text-xs sm:text-sm font-medium text-gray-600">Serviços Ativos</h3>
       </div>
-      <p class="text-4xl font-bold text-pink-600 mb-1">{{ totalMetrics.services || 0 }}</p>
-      <p class="text-xs text-gray-500">Visíveis no hub empresarial</p>
+      <p class="text-2xl sm:text-4xl font-bold text-pink-600 mb-1">{{ totalMetrics.services || 0 }}</p>
+      <p class="text-[10px] sm:text-xs text-gray-500">Visíveis no hub empresarial</p>
     </div>
-    <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
-      <div class="flex items-center mb-3">
-        <svg class="w-10 h-10 text-pink-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 sm:col-span-2 md:col-span-1">
+      <div class="flex items-center mb-2 sm:mb-3">
+        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-pink-500 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-7.793a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"></path>
         </svg>
-        <h3 class="text-sm font-medium text-gray-600">Equipe Ativa</h3>
+        <h3 class="text-xs sm:text-sm font-medium text-gray-600">Equipe Ativa</h3>
       </div>
-      <p class="text-4xl font-bold text-pink-600 mb-1">{{ totalMetrics.employees || 0 }}</p>
-      <p class="text-xs text-gray-500">Funcionários cadastrados</p>
+      <p class="text-2xl sm:text-4xl font-bold text-pink-600 mb-1">{{ totalMetrics.employees || 0 }}</p>
+      <p class="text-[10px] sm:text-xs text-gray-500">Funcionários cadastrados</p>
+    </div>
+  </div>
+  <!-- Agenda Rápida - Próximos Agendamentos -->
+  <div *ngIf="appointments && appointments.length > 0" class="mb-4 sm:mb-6 bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg sm:text-xl font-bold text-gray-800 flex items-center">
+        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-pink-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        Próximos Agendamentos
+      </h3>
+      <button (click)="switchTab(tabs.Agenda)" class="text-sm text-pink-600 hover:text-pink-700 font-medium">
+        Ver todos →
+      </button>
+    </div>
+    <div class="space-y-3 max-h-64 overflow-y-auto">
+      <div *ngFor="let appt of getUpcomingAppointments()" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-sm font-semibold text-gray-900">{{ formatTime(appt.dateTime) }}</span>
+            <span class="text-xs px-2 py-1 rounded-full" [ngClass]="{
+              'bg-green-100 text-green-700': appt.status === 'Confirmed',
+              'bg-yellow-100 text-yellow-700': appt.status === 'Scheduled',
+              'bg-gray-100 text-gray-700': appt.status !== 'Confirmed' && appt.status !== 'Scheduled'
+            }">
+              {{ appt.status === 'Confirmed' ? 'Confirmado' : appt.status === 'Scheduled' ? 'Agendado' : appt.status }}
+            </span>
+          </div>
+          <p class="text-sm text-gray-700 font-medium truncate">{{ getServiceName(appt) }}</p>
+          <div class="flex items-center gap-2 text-xs text-gray-500 mt-1">
+            <span *ngIf="appt.employee">{{ appt.employee.name }}</span>
+            <span *ngIf="appt.client">• {{ appt.client.name }}</span>
+          </div>
+        </div>
+        <div class="text-right ml-4">
+          <p class="text-sm font-bold text-pink-600">R$ {{ getAppointmentPrice(appt).toFixed(2).replace('.', ',') }}</p>
+        </div>
+      </div>
+      <div *ngIf="getUpcomingAppointments().length === 0" class="text-center text-gray-500 py-4">
+        Nenhum agendamento próximo
+      </div>
     </div>
   </div>
   <!-- Nav Tabs (adicionado padding extra no container pra tabs grandes) -->
-  <nav class="mb-6 bg-white rounded-xl shadow-lg p-6 flex flex-wrap gap-3 justify-center items-center border border-gray-200">
-    <button *ngFor="let tab of tabsArray"
-            [class]="activeTabClass(tab.key)"
-            (click)="switchTab(tab.key)"
-            class="px-6 py-3 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-pink-500/50">
-      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path [attr.d]="tab.iconPath"></path>
-      </svg>
-      <span>{{ tab.label }}</span>
-    </button>
+  <nav class="mb-4 sm:mb-6 bg-white rounded-xl shadow-lg p-2 sm:p-6 border border-gray-200 overflow-x-auto">
+    <div class="flex flex-nowrap sm:flex-wrap gap-2 sm:gap-3 justify-start sm:justify-center items-center min-w-max sm:min-w-0">
+      <button *ngFor="let tab of tabsArray"
+              [class]="activeTabClass(tab.key)"
+              (click)="switchTab(tab.key)"
+              class="px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-300 flex items-center space-x-1 sm:space-x-2 focus:outline-none focus:ring-2 focus:ring-pink-500/50 text-xs sm:text-base whitespace-nowrap">
+        <svg class="w-5 h-5 sm:w-7 sm:h-7 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path [attr.d]="tab.iconPath"></path>
+        </svg>
+        <span>{{ tab.label }}</span>
+      </button>
+    </div>
   </nav>
   <!-- Switch Tabs: Renderiza filhos (sem mudanças, mas garanta (companyUpdated) no child) -->
-  <div [ngSwitch]="activeTab" class="bg-white rounded-xl shadow-lg p-8">
-    <!-- <<< FIX: Removido [appointments]="appointments" e adicionado [companyId]="companyId" >>> -->
-    <app-agenda-tab *ngSwitchCase="tabs.Agenda" [companyId]="companyId" (apptCancelled)="onAppointmentCancelled()"></app-agenda-tab>
+  <div [ngSwitch]="activeTab" class="bg-white rounded-xl shadow-lg p-3 sm:p-6 md:p-8 overflow-x-auto">
+    <app-agenda-tab *ngSwitchCase="tabs.Agenda" [companyId]="companyId" [operatingHours]="companyForm.get('operatingHours')?.value || (companyForm.get('startTime')?.value + '-' + companyForm.get('endTime')?.value)" (apptCancelled)="onAppointmentCancelled()"></app-agenda-tab>
     <app-services-tab *ngSwitchCase="tabs.Services" [services]="services" (serviceSaved)="onServiceSaved($event)" (serviceDeleted)="onServiceDeleted($event)"></app-services-tab>
     <app-employees-tab *ngSwitchCase="tabs.Employees" [employees]="employees" [roles]="roles" (employeeSaved)="onEmployeeSaved($event)" (roleSaved)="onRoleSaved($event)"></app-employees-tab>
     <app-company-tab *ngSwitchCase="tabs.Company" [companyForm]="companyForm" [businessTypes]="businessTypes" [companyId]="companyId" (companyUpdated)="onCompanyUpdated()"></app-company-tab>
-    <app-reports-tab *ngSwitchCase="tabs.Reports" [serviceReports]="serviceReports"></app-reports-tab>
+    <app-reports-tab *ngSwitchCase="tabs.Reports" [companyId]="companyId" [active]="activeTab === tabs.Reports"></app-reports-tab>
     <div *ngSwitchDefault class="text-center text-gray-500 py-12">Selecione uma aba acima para continuar.</div>
   </div>
-  <!-- NOVO: Adicione isso no final do <div *ngIf="!initialLoading">, antes de </div> -->
-  <app-toast-global></app-toast-global>
 </div>
 <!-- FIX: Adicione um fallback pro loading indefinido (evita tela branca se initialLoading false mas dados não carregados) -->
 <div *ngIf="!initialLoading && (!companyForm || !totalMetrics)" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-white">
