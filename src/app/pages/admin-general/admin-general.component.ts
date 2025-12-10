@@ -315,37 +315,6 @@ export class AdminGeneralComponent implements OnInit {
     };
   }
 
-  // Helper para obter o nome do serviço
-  private getServiceName(appt: ApiAppointment): string {
-    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
-      const serviceNames = appt.services
-        .filter((s: any) => s && s.name)
-        .map((s: any) => s.name);
-      if (serviceNames.length > 0) {
-        return serviceNames.join(', ');
-      }
-    }
-    if (appt.service?.name) {
-      return appt.service.name;
-    }
-    if (appt.servicesJson) {
-      try {
-        const parsed = JSON.parse(appt.servicesJson);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const serviceNames = parsed
-            .filter((s: any) => s && s.name)
-            .map((s: any) => s.name);
-          if (serviceNames.length > 0) {
-            return serviceNames.join(', ');
-          }
-        }
-      } catch (e) {
-        // Ignora erro de parsing
-      }
-    }
-    return 'Serviço';
-  }
-
   // Helper para converter valor para número (price já vem como número da API)
   private toNumber(value: any): number {
     if (value === null || value === undefined) return 0;
@@ -357,60 +326,6 @@ export class AdminGeneralComponent implements OnInit {
       const parsed = parseFloat(cleaned);
       return isNaN(parsed) ? 0 : parsed;
     }
-    return 0;
-  }
-
-  // Helper para calcular o preço do agendamento
-  private getAppointmentPrice(appt: ApiAppointment): number {
-    const apptAny = appt as any;
-    
-    // Prioridade 1: Verificar campos diretos do agendamento
-    if (apptAny.totalPrice !== undefined && apptAny.totalPrice !== null) {
-      const price = this.toNumber(apptAny.totalPrice);
-      if (price > 0) return price;
-    }
-    if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
-      const price = this.toNumber(apptAny.totalAmount);
-      if (price > 0) return price;
-    }
-    if (apptAny.price !== undefined && apptAny.price !== null) {
-      const price = this.toNumber(apptAny.price);
-      if (price > 0) return price;
-    }
-    
-    // Prioridade 2: Array de serviços (price já vem como número)
-    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
-      const total = appt.services.reduce((sum: number, s: any) => {
-        if (!s) return sum;
-        const price = this.toNumber(s.price);
-        return sum + price;
-      }, 0);
-      if (total > 0) return total;
-    }
-    
-    // Prioridade 3: Serviço único (price já vem como número)
-    if (appt.service?.price !== undefined && appt.service?.price !== null) {
-      const price = this.toNumber(appt.service.price);
-      if (price > 0) return price;
-    }
-    
-    // Prioridade 4: servicesJson
-    if (appt.servicesJson) {
-      try {
-        const parsed = JSON.parse(appt.servicesJson);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const total = parsed.reduce((sum: number, s: any) => {
-            if (!s) return sum;
-            const price = this.toNumber(s.price);
-            return sum + price;
-          }, 0);
-          if (total > 0) return total;
-        }
-      } catch (e) {
-        // Ignora erro de parsing
-      }
-    }
-    
     return 0;
   }
 
@@ -565,4 +480,103 @@ export class AdminGeneralComponent implements OnInit {
 
   trackById(index: number, item: any): number { return item.id; }
   trackByName(index: number, item: ServiceReport): string { return item.name; }
+
+  // Métodos auxiliares para a agenda rápida
+  getUpcomingAppointments(): LocalAppointment[] {
+    const now = new Date();
+    return this.appointments
+      .filter(a => a.status !== 'Cancelled' && a.dateTime >= now)
+      .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
+      .slice(0, 5); // Mostrar apenas os próximos 5
+  }
+
+  formatTime(date: Date): string {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
+  // Métodos públicos para uso no template e internamente
+  getServiceName(appt: LocalAppointment | ApiAppointment): string {
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      const serviceNames = appt.services
+        .filter((s: any) => s && s.name)
+        .map((s: any) => s.name);
+      if (serviceNames.length > 0) {
+        return serviceNames.join(', ');
+      }
+    }
+    if (appt.service?.name) {
+      return appt.service.name;
+    }
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const serviceNames = parsed
+            .filter((s: any) => s && s.name)
+            .map((s: any) => s.name);
+          if (serviceNames.length > 0) {
+            return serviceNames.join(', ');
+          }
+        }
+      } catch (e) {
+        // Ignora erro de parsing
+      }
+    }
+    return 'Serviço';
+  }
+
+  getAppointmentPrice(appt: LocalAppointment | ApiAppointment): number {
+    const apptAny = appt as any;
+    
+    // Prioridade 1: Verificar campos diretos do agendamento
+    if (apptAny.totalPrice !== undefined && apptAny.totalPrice !== null) {
+      const price = this.toNumber(apptAny.totalPrice);
+      if (price > 0) return price;
+    }
+    if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
+      const price = this.toNumber(apptAny.totalAmount);
+      if (price > 0) return price;
+    }
+    if (apptAny.price !== undefined && apptAny.price !== null) {
+      const price = this.toNumber(apptAny.price);
+      if (price > 0) return price;
+    }
+    
+    // Prioridade 2: Array de serviços
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      const total = appt.services.reduce((sum: number, s: any) => {
+        if (!s) return sum;
+        const price = this.toNumber(s.price);
+        return sum + price;
+      }, 0);
+      if (total > 0) return total;
+    }
+    
+    // Prioridade 3: Serviço único
+    if (appt.service?.price !== undefined && appt.service?.price !== null) {
+      const price = this.toNumber(appt.service.price);
+      if (price > 0) return price;
+    }
+    
+    // Prioridade 4: servicesJson
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const total = parsed.reduce((sum: number, s: any) => {
+            if (!s) return sum;
+            const price = this.toNumber(s.price);
+            return sum + price;
+          }, 0);
+          if (total > 0) return total;
+        }
+      } catch (e) {
+        // Ignora erro de parsing
+      }
+    }
+    
+    return 0;
+  }
 }

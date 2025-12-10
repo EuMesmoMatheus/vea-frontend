@@ -54,6 +54,7 @@ export class ReportsTabComponent implements OnInit, OnChanges {
   
   // Data
   appointments: LocalAppointment[] = [];
+  allServices: any[] = []; // Cache de serviços para carregar pelo ID
   kpis: KPIs = {
     totalAppointments: 0,
     confirmedAppointments: 0,
@@ -101,6 +102,28 @@ export class ReportsTabComponent implements OnInit, OnChanges {
     const startStr = start.toISOString().split('T')[0];
     const endStr = end.toISOString().split('T')[0];
 
+    // Carregar serviços primeiro (para usar quando necessário)
+    if (this.allServices.length === 0) {
+      this.api.getServices(this.companyId, true).subscribe({
+        next: (res: any) => {
+          if (res.success && res.data) {
+            this.allServices = res.data;
+            console.log('📦 Serviços carregados para cache (reports):', this.allServices.length);
+          }
+          this.loadAppointmentsData(startStr, endStr);
+        },
+        error: (err) => {
+          console.error('❌ Erro ao carregar serviços:', err);
+          this.allServices = [];
+          this.loadAppointmentsData(startStr, endStr);
+        }
+      });
+    } else {
+      this.loadAppointmentsData(startStr, endStr);
+    }
+  }
+
+  private loadAppointmentsData(startStr: string, endStr: string): void {
     this.api.getAppointmentsWeek({ start: startStr, end: endStr, companyId: this.companyId }).subscribe({
       next: (res) => {
         if (res.success && res.data) {
@@ -137,26 +160,53 @@ export class ReportsTabComponent implements OnInit, OnChanges {
               };
             }
             
-            if (a.servicesJson && typeof a.servicesJson === 'string') {
+            // ServicesJson é uma string com IDs separados por vírgula (ex: "1,2,3")
+            if (a.servicesJson && typeof a.servicesJson === 'string' && a.servicesJson.trim() && !normalizedServices) {
               try {
-                const parsed = JSON.parse(a.servicesJson);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  normalizedServices = parsed.map((s: any) => ({
-                    id: s.id || s.Id || s.serviceId || s.ServiceId,
-                    name: s.name || s.Name || s.serviceName || s.ServiceName || 'Serviço',
-                    duration: s.duration || s.Duration || s.durationMinutes || 60,
-                    price: getPrice(s) // Price já é número
-                  }));
-                } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                  normalizedService = {
-                    id: parsed.id || parsed.Id || parsed.serviceId,
-                    name: parsed.name || parsed.Name || parsed.serviceName || 'Serviço',
-                    duration: parsed.duration || parsed.Duration || parsed.durationMinutes || 60,
-                    price: getPrice(parsed) // Price já é número
-                  };
+                // Tentar parsear como JSON primeiro (caso seja JSON)
+                try {
+                  const parsed = JSON.parse(a.servicesJson);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    normalizedServices = parsed.map((s: any) => ({
+                      id: s.id || s.Id || s.serviceId || s.ServiceId,
+                      name: s.name || s.Name || s.serviceName || s.ServiceName || 'Serviço',
+                      duration: s.duration || s.Duration || s.durationMinutes || 60,
+                      price: getPrice(s)
+                    }));
+                  } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    normalizedService = {
+                      id: parsed.id || parsed.Id || parsed.serviceId,
+                      name: parsed.name || parsed.Name || parsed.serviceName || 'Serviço',
+                      duration: parsed.duration || parsed.Duration || parsed.durationMinutes || 60,
+                      price: getPrice(parsed)
+                    };
+                  }
+                } catch (jsonError) {
+                  // Se não for JSON, tratar como string de IDs separados por vírgula
+                  const serviceIds = a.servicesJson.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+                  if (serviceIds.length > 0) {
+                    // Buscar serviços no cache pelo ID
+                    const loadedServices = serviceIds.map((id: number) => {
+                      const service = this.allServices.find(s => s.id === id);
+                      if (service) {
+                        return {
+                          id: service.id,
+                          name: service.name,
+                          duration: service.duration,
+                          price: typeof service.price === 'number' ? service.price : parseFloat(String(service.price)) || 0
+                        };
+                      }
+                      return null;
+                    }).filter((s: any) => s !== null);
+                    
+                    if (loadedServices.length > 0) {
+                      normalizedServices = loadedServices;
+                    }
+                  }
                 }
               } catch (e) {
                 // Ignora erro de parsing
+                console.error('❌ Erro ao processar servicesJson:', e, a.servicesJson);
               }
             }
             

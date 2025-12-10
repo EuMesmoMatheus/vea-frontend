@@ -45,6 +45,7 @@ export class AgendaTabComponent implements OnInit, OnChanges {
   hours: string[] = [];
   employees: Employee[] = [];
   allAppointments: LocalAppointment[] = [];
+  allServices: any[] = []; // Cache de serviços para carregar pelo ID
   dayMetrics: DayMetrics = {
     totalAppointments: 0,
     totalRevenue: 0,
@@ -111,6 +112,28 @@ export class AgendaTabComponent implements OnInit, OnChanges {
       companyId: this.companyId
     });
 
+    // Carregar serviços primeiro (para usar quando necessário)
+    if (this.allServices.length === 0) {
+      this.api.getServices(this.companyId, true).subscribe({
+        next: (res: any) => {
+          if (res.success && res.data) {
+            this.allServices = res.data;
+            console.log('📦 Serviços carregados para cache:', this.allServices.length);
+          }
+          this.loadEmployeesAndAppointments(dateStr);
+        },
+        error: (err) => {
+          console.error('❌ Erro ao carregar serviços:', err);
+          this.allServices = [];
+          this.loadEmployeesAndAppointments(dateStr);
+        }
+      });
+    } else {
+      this.loadEmployeesAndAppointments(dateStr);
+    }
+  }
+
+  private loadEmployeesAndAppointments(dateStr: string): void {
     // Carregar funcionários e agendamentos em paralelo
     this.api.getEmployees(this.companyId).subscribe({
       next: (res: any) => {
@@ -152,8 +175,6 @@ export class AgendaTabComponent implements OnInit, OnChanges {
           const mapped = appointmentsArray.map((a: any) => {
             const dateTime = new Date(a.startDateTime);
             
-            // API retorna services[] completo com price já como número
-            // Não precisa mais normalizar - usar diretamente
             const normalized: any = {
               ...a,
               dateTime: dateTime
@@ -164,12 +185,40 @@ export class AgendaTabComponent implements OnInit, OnChanges {
               normalized.totalPrice = typeof a.totalPrice === 'number' ? a.totalPrice : parseFloat(String(a.totalPrice)) || 0;
             }
             
-            // Garantir que services[].price seja número (já vem como número da API)
-            if (a.services && Array.isArray(a.services)) {
+            // Se services[] não vier completo, mas servicesJson existir, carregar pelo ID
+            if (a.services && Array.isArray(a.services) && a.services.length > 0) {
+              // API retorna services[] completo com price já como número
               normalized.services = a.services.map((s: any) => ({
                 ...s,
                 price: typeof s.price === 'number' ? s.price : parseFloat(String(s.price)) || 0
               }));
+            } else if (a.servicesJson && typeof a.servicesJson === 'string' && a.servicesJson.trim()) {
+              // ServicesJson é uma string com IDs separados por vírgula (ex: "1,2,3")
+              try {
+                const serviceIds = a.servicesJson.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+                if (serviceIds.length > 0) {
+                  // Buscar serviços no cache pelo ID
+                  const loadedServices = serviceIds.map((id: number) => {
+                    const service = this.allServices.find(s => s.id === id);
+                    if (service) {
+                      return {
+                        id: service.id,
+                        name: service.name,
+                        duration: service.duration,
+                        price: typeof service.price === 'number' ? service.price : parseFloat(String(service.price)) || 0
+                      };
+                    }
+                    return null;
+                  }).filter((s: any) => s !== null);
+                  
+                  if (loadedServices.length > 0) {
+                    normalized.services = loadedServices;
+                    console.log('✅ Serviços carregados pelo ID:', loadedServices);
+                  }
+                }
+              } catch (e) {
+                console.error('❌ Erro ao processar servicesJson:', e, a.servicesJson);
+              }
             }
             
             return normalized;

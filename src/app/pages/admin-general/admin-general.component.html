@@ -68,6 +68,47 @@
       <p class="text-[10px] sm:text-xs text-gray-500">Funcionários cadastrados</p>
     </div>
   </div>
+  <!-- Agenda Rápida - Próximos Agendamentos -->
+  <div *ngIf="appointments && appointments.length > 0" class="mb-4 sm:mb-6 bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg sm:text-xl font-bold text-gray-800 flex items-center">
+        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-pink-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        Próximos Agendamentos
+      </h3>
+      <button (click)="switchTab(tabs.Agenda)" class="text-sm text-pink-600 hover:text-pink-700 font-medium">
+        Ver todos →
+      </button>
+    </div>
+    <div class="space-y-3 max-h-64 overflow-y-auto">
+      <div *ngFor="let appt of getUpcomingAppointments()" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-sm font-semibold text-gray-900">{{ formatTime(appt.dateTime) }}</span>
+            <span class="text-xs px-2 py-1 rounded-full" [ngClass]="{
+              'bg-green-100 text-green-700': appt.status === 'Confirmed',
+              'bg-yellow-100 text-yellow-700': appt.status === 'Scheduled',
+              'bg-gray-100 text-gray-700': appt.status !== 'Confirmed' && appt.status !== 'Scheduled'
+            }">
+              {{ appt.status === 'Confirmed' ? 'Confirmado' : appt.status === 'Scheduled' ? 'Agendado' : appt.status }}
+            </span>
+          </div>
+          <p class="text-sm text-gray-700 font-medium truncate">{{ getServiceName(appt) }}</p>
+          <div class="flex items-center gap-2 text-xs text-gray-500 mt-1">
+            <span *ngIf="appt.employee">{{ appt.employee.name }}</span>
+            <span *ngIf="appt.client">• {{ appt.client.name }}</span>
+          </div>
+        </div>
+        <div class="text-right ml-4">
+          <p class="text-sm font-bold text-pink-600">R$ {{ getAppointmentPrice(appt).toFixed(2).replace('.', ',') }}</p>
+        </div>
+      </div>
+      <div *ngIf="getUpcomingAppointments().length === 0" class="text-center text-gray-500 py-4">
+        Nenhum agendamento próximo
+      </div>
+    </div>
+  </div>
   <!-- Nav Tabs (adicionado padding extra no container pra tabs grandes) -->
   <nav class="mb-4 sm:mb-6 bg-white rounded-xl shadow-lg p-2 sm:p-6 border border-gray-200 overflow-x-auto">
     <div class="flex flex-nowrap sm:flex-wrap gap-2 sm:gap-3 justify-start sm:justify-center items-center min-w-max sm:min-w-0">
