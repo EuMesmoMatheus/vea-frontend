@@ -127,9 +127,11 @@ export class AgendaTabComponent implements OnInit, OnChanges {
   }
 
   private loadAppointments(dateStr: string): void {
-    console.log('🔍 Buscando agendamentos:', { start: dateStr, end: dateStr, companyId: this.companyId });
+    // A API de semana espera um range (start/end). Vamos buscar a semana inteira e filtrar o dia localmente.
+    const { start, end } = this.getWeekRange(this.selectedDate);
+    console.log('🔍 Buscando agendamentos (semana):', { start, end, companyId: this.companyId, diaSelecionado: dateStr });
     
-    this.api.getAppointmentsWeek({ start: dateStr, end: dateStr, companyId: this.companyId }).subscribe({
+    this.api.getAppointmentsWeek({ start, end, companyId: this.companyId }).subscribe({
       next: (res) => {
         console.log('📦 Resposta completa da API:', res);
         
@@ -215,6 +217,19 @@ export class AgendaTabComponent implements OnInit, OnChanges {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private getWeekRange(date: Date): { start: string; end: string } {
+    const d = new Date(date);
+    const day = d.getDay(); // Domingo = 0
+    const startDate = new Date(d);
+    startDate.setDate(d.getDate() - day);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+    return {
+      start: this.formatDateForComparison(startDate),
+      end: this.formatDateForComparison(endDate)
+    };
   }
 
   private formatDateForComparison(date: Date): string {
