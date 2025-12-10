@@ -112,23 +112,23 @@
     <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-gray-100">
       <div class="flex flex-col gap-3 sm:gap-4">
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
-          <!-- Tabs de período -->
+        <!-- Tabs de período -->
           <div class="flex bg-gray-100 rounded-xl p-1 overflow-x-auto">
-            <button (click)="changeView('today')" 
+          <button (click)="changeView('today')" 
               class="px-3 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap"
-              [ngClass]="activeView === 'today' ? 'bg-pink-500 text-white shadow-md' : 'text-gray-600 hover:text-pink-600'">
-              Hoje
-            </button>
-            <button (click)="changeView('week')" 
+            [ngClass]="activeView === 'today' ? 'bg-pink-500 text-white shadow-md' : 'text-gray-600 hover:text-pink-600'">
+            Hoje
+          </button>
+          <button (click)="changeView('week')" 
               class="px-3 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap"
-              [ngClass]="activeView === 'week' ? 'bg-pink-500 text-white shadow-md' : 'text-gray-600 hover:text-pink-600'">
-              Semana
-            </button>
-            <button (click)="changeView('month')" 
+            [ngClass]="activeView === 'week' ? 'bg-pink-500 text-white shadow-md' : 'text-gray-600 hover:text-pink-600'">
+            Semana
+          </button>
+          <button (click)="changeView('month')" 
               class="px-3 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap"
-              [ngClass]="activeView === 'month' ? 'bg-pink-500 text-white shadow-md' : 'text-gray-600 hover:text-pink-600'">
-              Mês
-            </button>
+            [ngClass]="activeView === 'month' ? 'bg-pink-500 text-white shadow-md' : 'text-gray-600 hover:text-pink-600'">
+            Mês
+          </button>
           </div>
 
           <!-- Total de agendamentos -->
@@ -337,7 +337,7 @@
               <!-- Horário -->
               <div class="text-center bg-pink-50 rounded-xl px-4 py-2 min-w-[80px]">
                 <p class="text-2xl font-bold text-pink-600">{{ formatTime(appt.startDateTime) }}</p>
-                <p *ngIf="activeView !== 'today'" class="text-xs text-gray-500 mt-1">{{ formatFullDate(appt.startDateTime) }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ formatFullDate(appt.startDateTime) }}</p>
               </div>
               
               <!-- Cliente e Serviços -->
