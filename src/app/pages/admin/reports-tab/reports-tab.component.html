@@ -65,7 +65,7 @@
           <div>
             <p class="text-xs sm:text-sm text-gray-500 mb-1">Faturamento</p>
             <p class="text-2xl sm:text-3xl font-bold text-emerald-600">
-              R$ {{ kpis.totalRevenue.toFixed(0) }}
+              R$ {{ kpis.totalRevenue.toFixed(2).replace('.', ',') }}
             </p>
             <p class="text-xs text-gray-400 mt-1">período selecionado</p>
           </div>
@@ -81,7 +81,7 @@
           <div>
             <p class="text-xs sm:text-sm text-gray-500 mb-1">Ticket Médio</p>
             <p class="text-2xl sm:text-3xl font-bold text-indigo-600">
-              R$ {{ kpis.averageTicket.toFixed(2) }}
+              R$ {{ kpis.averageTicket.toFixed(2).replace('.', ',') }}
             </p>
             <p class="text-xs text-gray-400 mt-1">por atendimento</p>
           </div>
@@ -167,7 +167,7 @@
             
             <!-- Revenue -->
             <span class="text-xs sm:text-sm font-semibold text-emerald-600 whitespace-nowrap">
-              R$ {{ service.revenue.toFixed(0) }}
+              R$ {{ service.revenue.toFixed(2).replace('.', ',') }}
             </span>
           </div>
         </div>
@@ -206,7 +206,7 @@
             
             <!-- Revenue -->
             <span class="text-xs sm:text-sm font-semibold text-emerald-600 whitespace-nowrap">
-              R$ {{ emp.revenue.toFixed(0) }}
+              R$ {{ emp.revenue.toFixed(2).replace('.', ',') }}
             </span>
           </div>
         </div>

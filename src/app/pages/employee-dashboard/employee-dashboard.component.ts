@@ -370,14 +370,29 @@ export class EmployeeDashboardComponent implements OnInit {
     return date.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
   }
 
+  // Helper para converter valor para número (price já vem como número da API)
+  private toNumber(value: any): number {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') {
+      return isNaN(value) ? 0 : value;
+    }
+    if (typeof value === 'string') {
+      const cleaned = value.replace(/[R$\s]/g, '').replace(',', '.');
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  }
+
   getTotalPrice(services: Array<{ price?: number }>): number {
     if (!services || !Array.isArray(services) || services.length === 0) {
       return 0;
     }
     return services.reduce((sum, s) => {
       if (!s) return sum;
-      const price = s.price !== undefined && s.price !== null ? parseFloat(String(s.price)) : 0;
-      return sum + (isNaN(price) ? 0 : price);
+      // Price já vem como número da API, usa diretamente
+      const price = this.toNumber(s.price);
+      return sum + price;
     }, 0);
   }
 

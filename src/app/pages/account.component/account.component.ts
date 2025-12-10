@@ -221,37 +221,51 @@ export class AccountComponent implements OnInit {
     return map[appt.status] || 'bg-gray-100 text-gray-800';
   }
 
+  // Helper para converter valor para número (price já vem como número da API)
+  private toNumber(value: any): number {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') {
+      return isNaN(value) ? 0 : value;
+    }
+    if (typeof value === 'string') {
+      const cleaned = value.replace(/[R$\s]/g, '').replace(',', '.');
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  }
+
   // CALCULA O PREÇO TOTAL DO AGENDAMENTO
   getTotalPrice(appt: Appointment): number {
     const apptAny = appt as any;
     
     // Prioridade 1: Verificar campos diretos do agendamento
     if (apptAny.totalPrice !== undefined && apptAny.totalPrice !== null) {
-      const price = parseFloat(String(apptAny.totalPrice)) || 0;
+      const price = this.toNumber(apptAny.totalPrice);
       if (price > 0) return price;
     }
     if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
-      const price = parseFloat(String(apptAny.totalAmount)) || 0;
+      const price = this.toNumber(apptAny.totalAmount);
       if (price > 0) return price;
     }
     if (apptAny.price !== undefined && apptAny.price !== null) {
-      const price = parseFloat(String(apptAny.price)) || 0;
+      const price = this.toNumber(apptAny.price);
       if (price > 0) return price;
     }
     
-    // Prioridade 2: Array de serviços
+    // Prioridade 2: Array de serviços (price já vem como número)
     if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
       const total = appt.services.reduce((sum: number, s: any) => {
         if (!s) return sum;
-        const price = s.price !== undefined && s.price !== null ? parseFloat(String(s.price)) : 0;
-        return sum + (isNaN(price) ? 0 : price);
+        const price = this.toNumber(s.price);
+        return sum + price;
       }, 0);
       if (total > 0) return total;
     }
     
-    // Prioridade 3: Serviço único
+    // Prioridade 3: Serviço único (price já vem como número)
     if (appt.service?.price !== undefined && appt.service?.price !== null) {
-      const price = parseFloat(String(appt.service.price)) || 0;
+      const price = this.toNumber(appt.service.price);
       if (price > 0) return price;
     }
     
@@ -262,8 +276,8 @@ export class AccountComponent implements OnInit {
         if (Array.isArray(parsed) && parsed.length > 0) {
           const total = parsed.reduce((sum: number, s: any) => {
             if (!s) return sum;
-            const price = s.price !== undefined && s.price !== null ? parseFloat(String(s.price)) : 0;
-            return sum + (isNaN(price) ? 0 : price);
+            const price = this.toNumber(s.price);
+            return sum + price;
           }, 0);
           if (total > 0) return total;
         }
