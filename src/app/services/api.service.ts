@@ -64,6 +64,7 @@ interface Role {
 export interface Service {
   id: number;
   name: string;
+  description?: string;
   duration: number;
   price: number;
   active: boolean;
@@ -181,13 +182,16 @@ export class ApiService {
       .pipe(catchError(this.handleError('Falha ao confirmar conta')));
   }
 
-  checkEmailExists(email: string): Observable<boolean> {
-    return this.http.get<boolean>(`${this.apiUrl}/auth/check-email/${encodeURIComponent(email)}`)
+  checkEmailExists(email: string): Observable<ApiResponse<boolean>> {
+    return this.http.get<ApiResponse<boolean>>(`${this.apiUrl}/auth/check-email/${encodeURIComponent(email)}`)
       .pipe(catchError(this.handleError('Falha ao verificar e-mail')));
   }
 
   resendVerification(email: string): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(`${this.apiUrl}/auth/resend-verification`, { email })
+    // Back-end espera [FromBody] string email - precisa enviar como string JSON
+    return this.http.post<ApiResponse>(`${this.apiUrl}/auth/resend-verification`, JSON.stringify(email), {
+      headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+    })
       .pipe(catchError(this.handleError('Falha ao reenviar e-mail')));
   }
 

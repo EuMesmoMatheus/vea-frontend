@@ -146,8 +146,8 @@ export class AdminGeneralComponent implements OnInit {
     }
     this.initialLoading = true;
     this.loading = true;
-    // <<< FIX: Datas baseadas na data atual (31/10/2025)
-    const today = new Date('2025-10-31');  // Data atual
+    // Datas baseadas na data atual
+    const today = new Date();
     const start = today.toISOString().split('T')[0];
     const end = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 

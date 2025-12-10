@@ -258,7 +258,7 @@
 <!-- Modal de agendamento (apenas para logados) -->
 <app-agendamento-modal *ngIf="showModal && !isGuest"
                        [companyId]="selectedCompanyId!"
-                       [clientId]="user.id"
+                       [clientId]="user.id || 0"
                        (close)="closeModal($event)">
 </app-agendamento-modal>
 

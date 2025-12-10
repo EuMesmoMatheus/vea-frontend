@@ -104,7 +104,7 @@ describe('RegisterComponent', () => {
   });
 
   it('deve cadastrar cliente com sucesso', fakeAsync(() => {
-    apiServiceSpy.checkEmailExists.and.returnValue(of(false as any));
+    apiServiceSpy.checkEmailExists.and.returnValue(of({ success: true, data: false }));
     apiServiceSpy.register.and.returnValue(of({
       success: true,
       user: { id: 1, name: 'Teste', email: 'teste@email.com' },
@@ -126,7 +126,7 @@ describe('RegisterComponent', () => {
   }));
 
   it('deve mostrar erro se email já existe', fakeAsync(() => {
-    apiServiceSpy.checkEmailExists.and.returnValue(of(true as any));
+    apiServiceSpy.checkEmailExists.and.returnValue(of({ success: true, data: true }));
 
     component.registerForm.patchValue({
       name: 'Teste',

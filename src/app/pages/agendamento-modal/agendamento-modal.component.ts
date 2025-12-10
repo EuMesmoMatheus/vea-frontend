@@ -162,39 +162,38 @@ export class AgendamentoModalComponent implements OnChanges {
     }
 
     this.loadingSlots = true;
-    const totalMinutes = this.totalDuration;
-    const workHours = this.getWorkHours(this.selectedDate);
-    const possibleSlots = this.generatePossibleSlots(workHours.start, workHours.end, 30);
-
-    this.api.getAgendaDoDia(this.companyId, this.selectedEmployee.id, this.selectedDate)
-      .subscribe({
-        next: (events: AgendaEvent[]) => {
-          const now = new Date();
-          const isToday = this.selectedDate === now.toISOString().split('T')[0];
-          
-          this.availableSlots = possibleSlots.filter(slot => {
-            const slotStart = new Date(`${this.selectedDate}T${slot}:00`);
-            const slotEnd = new Date(slotStart.getTime() + totalMinutes * 60000);
-            const dayEnd = new Date(`${this.selectedDate}T${workHours.end}:00`);
-            
-            // Se for hoje, não mostra horários que já passaram
-            if (isToday && slotStart <= now) return false;
-            
-            if (slotEnd > dayEnd) return false;
-
-            return !events.some(ev => {
-              const evStart = new Date(ev.start);
-              const evEnd = new Date(ev.end);
-              return slotStart < evEnd && slotEnd > evStart;
-            });
-          });
-          this.loadingSlots = false;
-        },
-        error: () => {
-          this.availableSlots = [];
-          this.loadingSlots = false;
+    // Usa o endpoint do back-end que calcula slots disponíveis considerando blocks e conflitos
+    const serviceIds = this.selectedServices.map(s => s.id);
+    
+    this.api.getAvailableSlots(
+      this.companyId,
+      this.selectedEmployee.id,
+      this.selectedDate,
+      serviceIds
+    ).subscribe({
+      next: (slots: string[]) => {
+        // Filtra horários passados se for hoje
+        const now = new Date();
+        const isToday = this.selectedDate === now.toISOString().split('T')[0];
+        
+        if (isToday) {
+          const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+          this.availableSlots = slots.filter(slot => slot > currentTime);
+        } else {
+          this.availableSlots = slots;
         }
-      });
+        this.loadingSlots = false;
+      },
+      error: (err) => {
+        console.error('Erro ao carregar slots disponíveis:', err);
+        this.availableSlots = [];
+        this.loadingSlots = false;
+        // Mostra mensagem de erro apenas se não for erro de validação esperado
+        if (err.status !== 400) {
+          this.toast.error('Erro ao carregar horários disponíveis. Tente novamente.');
+        }
+      }
+    });
   }
 
   selectTimeSlot(slot: string) {
@@ -229,9 +228,13 @@ export class AgendamentoModalComponent implements OnChanges {
       companyId: this.companyId,
       serviceIds: this.selectedServices.map(s => s.id),
       employeeId: this.selectedEmployee!.id,
-      clientId: this.clientId,
       startDateTime
     };
+    
+    // ClientId é opcional (pode ser 0 para visitantes) - back-end aceita null/0
+    if (this.clientId && this.clientId > 0) {
+      payload.clientId = this.clientId;
+    }
 
     // Adicionar totalPrice e totalDurationMinutes apenas se tiverem valores válidos (> 0)
     // O backend calcula automaticamente se não enviados, mas podemos enviar para validação

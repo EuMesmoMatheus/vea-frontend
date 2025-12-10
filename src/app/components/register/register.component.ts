@@ -350,10 +350,11 @@ export class RegisterComponent implements OnInit {
       this.api.checkEmailExists(email)
         .pipe(take(1))
         .subscribe({
-          next: (response: any) => {
+          next: (response) => {
             this.loading = false;
-            console.log('API Response checkEmail:', response, 'Data exists?', !!response?.data); // EXPANDIDO: Log completo + check booleano
-            if (response?.data) {
+            // Back-end retorna ApiResponse<bool> com data: boolean
+            const emailExists = response?.success && response?.data === true;
+            if (emailExists) {
               this.error = 'E-mail já cadastrado no sistema.';
               const emailControl = this.registerForm.get('email');
               emailControl?.setErrors({ emailExists: true });

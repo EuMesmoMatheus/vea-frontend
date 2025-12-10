@@ -187,7 +187,7 @@ export class EmployeesTabComponent {
     }
    
     if (this.editingId) {
-      payload.append('Id', this.editingId.toString());
+      // Id vem na rota, não no FormData
       this.api.updateEmployee(this.editingId, payload).subscribe({
         next: (response) => {
           if (response.success && response.data) {

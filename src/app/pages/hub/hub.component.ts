@@ -191,8 +191,9 @@ export class HubComponent implements OnInit {
     this.error = '';
     this.api.getCompanies('').pipe(timeout(10000)).subscribe({
       next: (response: ApiResponse<any[]>) => {
-        if (response.success !== false) {
-          const data = response.data || [];
+        // Back-end retorna ApiResponse com success: true
+        if (response.success === true && response.data) {
+          const data = response.data;
           this.companies = data;
           this.filteredCompanies = [...this.companies];
           console.log('Empresas carregadas:', this.companies.length, 'itens');
