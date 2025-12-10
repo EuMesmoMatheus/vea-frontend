@@ -438,7 +438,15 @@ export class ApiService {
   }
 
   createAppointment(payload: any): Observable<ApiResponse<Appointment>> {
-    return this.http.post<ApiResponse<Appointment>>(`${this.apiUrl}/appointments`, payload)
+    // Garantir que totalPrice e totalDurationMinutes sejam números válidos
+    if (payload.totalPrice !== undefined && payload.totalPrice !== null) {
+      payload.totalPrice = typeof payload.totalPrice === 'number' ? payload.totalPrice : parseFloat(String(payload.totalPrice)) || 0;
+    }
+    if (payload.totalDurationMinutes !== undefined && payload.totalDurationMinutes !== null) {
+      payload.totalDurationMinutes = typeof payload.totalDurationMinutes === 'number' ? payload.totalDurationMinutes : parseInt(String(payload.totalDurationMinutes), 10) || 0;
+    }
+    
+    return this.http.post<ApiResponse<Appointment>>(`${this.apiUrl}/appointments`, payload, { headers: this.getAuthHeaders() })
       .pipe(catchError(this.handleError('Falha ao criar agendamento')));
   }
 

@@ -4,7 +4,8 @@ import { ApiService, Service, Appointment as ApiAppointment } from '../../servic
 import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { jwtDecode } from 'jwt-decode';
 import { ToastService } from '../../services/toast.service';
 import { ConfirmService } from '../../services/confirm.service';
@@ -150,16 +151,44 @@ export class AdminGeneralComponent implements OnInit {
     const start = today.toISOString().split('T')[0];
     const end = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+    // Usar forkJoin com catchError em cada observable para não quebrar tudo se um falhar
     forkJoin({
-      company: this.api.getCompany(this.companyId),
-      employees: this.api.getEmployees(this.companyId),
-      roles: this.api.getRoles(this.companyId),
-      services: this.api.getServices(this.companyId, true),  // Inclui inativos no admin
+      company: this.api.getCompany(this.companyId).pipe(
+        catchError(err => {
+          console.error('❌ Erro ao carregar empresa:', err);
+          return of({ success: false, data: null, message: 'Erro ao carregar empresa' });
+        })
+      ),
+      employees: this.api.getEmployees(this.companyId).pipe(
+        catchError(err => {
+          console.error('❌ Erro ao carregar funcionários:', err);
+          return of({ success: false, data: [], message: 'Erro ao carregar funcionários' });
+        })
+      ),
+      roles: this.api.getRoles(this.companyId).pipe(
+        catchError(err => {
+          console.error('❌ Erro ao carregar cargos:', err);
+          return of({ success: false, data: [], message: 'Erro ao carregar cargos' });
+        })
+      ),
+      services: this.api.getServices(this.companyId, true).pipe(
+        catchError(err => {
+          console.error('❌ Erro ao carregar serviços:', err);
+          return of({ success: false, data: [], message: 'Erro ao carregar serviços' });
+        })
+      ),
       appointments: this.api.getAppointmentsWeek({
         start,
         end,
         companyId: this.companyId
-      })
+      }).pipe(
+        catchError(err => {
+          console.error('❌ Erro ao carregar agendamentos:', err);
+          console.error('❌ Detalhes:', { status: err.status, message: err.message, error: err.error });
+          // Retorna resposta vazia para não quebrar o forkJoin
+          return of({ success: false, data: [], message: 'Erro ao carregar agendamentos' });
+        })
+      )
     }).subscribe({
       next: (responses) => {
         if (responses.company?.success !== true || !responses.company.data) {
@@ -188,6 +217,7 @@ export class AdminGeneralComponent implements OnInit {
         this.loadServices(this.companyId, responses.services);
         
         // <<< FIX: Mapeamento corrigido para LocalAppointment (usa startDateTime do ApiAppointment)
+        // Se appointments falhou, usar array vazio
         this.appointments = (responses.appointments?.success === true ? (responses.appointments.data || []) : []).map((a: ApiAppointment) => ({
           ...a,
           dateTime: new Date(a.startDateTime)  // <<< Adiciona dateTime local

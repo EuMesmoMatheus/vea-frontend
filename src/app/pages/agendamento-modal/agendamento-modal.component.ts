@@ -224,17 +224,25 @@ export class AgendamentoModalComponent implements OnChanges {
     const totalPrice = this.totalPrice;
     const totalDuration = this.totalDuration;
 
-    const payload = {
+    // Montar payload - campos opcionais só se tiverem valores válidos
+    const payload: any = {
       companyId: this.companyId,
       serviceIds: this.selectedServices.map(s => s.id),
       employeeId: this.selectedEmployee!.id,
       clientId: this.clientId,
-      startDateTime,
-      totalPrice: totalPrice, // Adiciona o preço total
-      totalDurationMinutes: totalDuration // Adiciona a duração total
+      startDateTime
     };
 
-    console.log('📤 Payload do agendamento:', payload);
+    // Adicionar totalPrice e totalDurationMinutes apenas se tiverem valores válidos (> 0)
+    // O backend calcula automaticamente se não enviados, mas podemos enviar para validação
+    if (totalPrice > 0) {
+      payload.totalPrice = Number(totalPrice.toFixed(2)); // Garantir 2 casas decimais
+    }
+    if (totalDuration > 0) {
+      payload.totalDurationMinutes = Number(totalDuration);
+    }
+
+    console.log('📤 Payload do agendamento:', JSON.stringify(payload, null, 2));
     console.log('💰 Preço total calculado:', totalPrice);
     console.log('⏱️ Duração total:', totalDuration);
 
@@ -246,13 +254,31 @@ export class AgendamentoModalComponent implements OnChanges {
           this.close.emit({ success: true });
         } else {
           console.error('❌ Erro na resposta:', res);
-          this.toast.error('Erro ao agendar. Tente novamente.');
+          const errorMsg = res.message || 'Erro ao agendar. Tente novamente.';
+          this.toast.error(errorMsg);
         }
         this.loading = false;
       },
       error: (err) => {
         console.error('❌ Erro ao criar agendamento:', err);
-        this.toast.error('Erro ao agendar. Tente novamente. ❌');
+        console.error('❌ Detalhes do erro:', {
+          status: err.status,
+          message: err.message,
+          error: err.error,
+          url: err.url
+        });
+        
+        // Mensagem de erro mais específica
+        let errorMsg = 'Erro ao agendar. Tente novamente. ❌';
+        if (err.error?.message) {
+          errorMsg = err.error.message;
+        } else if (err.status === 500) {
+          errorMsg = 'Erro no servidor. Verifique os dados e tente novamente.';
+        } else if (err.status === 400) {
+          errorMsg = 'Dados inválidos. Verifique as informações e tente novamente.';
+        }
+        
+        this.toast.error(errorMsg);
         this.loading = false;
       }
     });
