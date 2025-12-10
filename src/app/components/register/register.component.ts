@@ -406,9 +406,11 @@ export class RegisterComponent implements OnInit {
           }
         });
     } else {
-      // Formato: "HH:MM-HH:MM" (ex: "09:00-18:00")
-      const operatingHours = startTime && endTime ? `${startTime}-${endTime}` : '';
-      console.log('📤 Enviando operatingHours:', operatingHours);
+      // Back-end espera JSON: {"startTime":"08:00","endTime":"18:00"}
+      const operatingHoursJson = startTime && endTime 
+        ? JSON.stringify({ startTime, endTime })
+        : '';
+      console.log('📤 Enviando operatingHours:', operatingHoursJson);
       const userData = new FormData();
       userData.append('name', formValue.name || '');
       userData.append('email', formValue.email || '');
@@ -422,7 +424,7 @@ export class RegisterComponent implements OnInit {
       userData.append('bairro', formValue.bairro || '');
       userData.append('cidade', formValue.cidade || '');
       userData.append('uf', formValue.uf || '');
-      userData.append('operatingHours', operatingHours);
+      userData.append('operatingHours', operatingHoursJson);
       userData.append('businessType', formValue.businessType || '');
       if (formValue.logo) userData.append('logo', formValue.logo as File);
       if (formValue.coverImage) userData.append('coverImage', formValue.coverImage as File);
