@@ -131,66 +131,79 @@ export class AgendaTabComponent implements OnInit, OnChanges {
     
     this.api.getAppointmentsWeek({ start: dateStr, end: dateStr, companyId: this.companyId }).subscribe({
       next: (res) => {
-        console.log('📦 Resposta completa da API:', JSON.stringify(res, null, 2));
+        console.log('📦 Resposta completa da API:', res);
         
-        if (res.success) {
-          if (res.data && Array.isArray(res.data)) {
-            console.log('✅ Dados recebidos:', res.data.length, 'agendamentos');
-            
-            // Mapear e filtrar agendamentos
-            const mapped = res.data.map((a: Appointment) => ({
+        if (res.success && res.data) {
+          // Garantir que res.data é um array
+          const appointmentsArray = Array.isArray(res.data) ? res.data : [];
+          console.log('✅ Dados recebidos:', appointmentsArray.length, 'agendamentos');
+          
+          if (appointmentsArray.length > 0) {
+            console.log('📋 Primeiro agendamento recebido:', appointmentsArray[0]);
+          }
+          
+          // Mapear agendamentos
+          const mapped = appointmentsArray.map((a: Appointment) => {
+            const dateTime = new Date(a.startDateTime);
+            return {
               ...a,
-              dateTime: new Date(a.startDateTime),
-            }));
+              dateTime: dateTime
+            };
+          }) as LocalAppointment[];
+          
+          console.log('📋 Agendamentos mapeados:', mapped.length);
+          
+          // Filtrar apenas do dia selecionado e não cancelados
+          // Usar comparação de data local para evitar problemas de timezone
+          const selectedDateObj = new Date(dateStr + 'T00:00:00');
+          const selectedDateStr = this.formatDateForComparison(selectedDateObj);
+          
+          this.allAppointments = mapped.filter((a: LocalAppointment) => {
+            const apptDateStr = this.formatDateForComparison(a.dateTime);
+            const isSameDay = apptDateStr === selectedDateStr;
+            const isNotCancelled = a.status !== 'Cancelled';
             
-            console.log('📋 Agendamentos mapeados:', mapped.length);
-            console.log('📋 Exemplo de agendamento:', mapped[0]);
-            
-            // Filtrar apenas do dia selecionado e não cancelados
-            this.allAppointments = mapped.filter((a: LocalAppointment) => {
-              const apptDateStr = a.dateTime.toISOString().split('T')[0];
-              const isSameDay = apptDateStr === dateStr;
-              const isNotCancelled = a.status !== 'Cancelled';
-              
-              if (!isSameDay) {
-                console.log('⏭️ Agendamento ignorado (dia diferente):', {
-                  apptDate: apptDateStr,
-                  selectedDate: dateStr,
-                  appointment: a
-                });
-              }
-              if (!isNotCancelled) {
-                console.log('⏭️ Agendamento ignorado (cancelado):', a);
-              }
-              
-              return isSameDay && isNotCancelled;
-            }) as LocalAppointment[];
-            
-            // Debug: verificar dados carregados
-            console.log('📊 Agendamentos finais (após filtros):', this.allAppointments.length);
-            
-            if (this.allAppointments.length > 0) {
-              console.log('📝 Primeiro agendamento:', {
-                id: this.allAppointments[0].id,
-                employee: this.allAppointments[0].employee,
-                employeeId: this.allAppointments[0].employee?.id,
-                dateTime: this.allAppointments[0].dateTime,
-                hour: this.allAppointments[0].dateTime.getHours(),
-                status: this.allAppointments[0].status
+            if (!isSameDay && appointmentsArray.length <= 5) {
+              console.log('⏭️ Agendamento ignorado (dia diferente):', {
+                apptDate: apptDateStr,
+                selectedDate: selectedDateStr,
+                appointmentId: a.id,
+                startDateTime: a.startDateTime
               });
-            } else {
-              console.warn('⚠️ Nenhum agendamento encontrado para o dia:', dateStr);
-              if (res.data && res.data.length > 0) {
-                console.log('🔍 Todos os agendamentos recebidos:', res.data);
-              }
             }
+            
+            return isSameDay && isNotCancelled;
+          }) as LocalAppointment[];
+          
+          // Debug: verificar dados carregados
+          console.log('📊 Agendamentos finais (após filtros):', this.allAppointments.length);
+          
+          if (this.allAppointments.length > 0) {
+            console.log('📝 Primeiro agendamento final:', {
+              id: this.allAppointments[0].id,
+              employee: this.allAppointments[0].employee,
+              employeeId: this.allAppointments[0].employee?.id,
+              dateTime: this.allAppointments[0].dateTime,
+              hour: this.allAppointments[0].dateTime.getHours(),
+              status: this.allAppointments[0].status,
+              services: this.allAppointments[0].services,
+              service: this.allAppointments[0].service
+            });
           } else {
-            console.warn('⚠️ res.data não é um array:', res.data);
+            console.warn('⚠️ Nenhum agendamento encontrado para o dia:', dateStr);
+            if (appointmentsArray.length > 0) {
+              console.log('🔍 Todos os agendamentos recebidos (primeiros 3):', appointmentsArray.slice(0, 3));
+            }
           }
           
           this.calculateMetrics();
         } else {
-          console.warn('⚠️ Resposta sem sucesso:', { success: res.success, message: res.message });
+          console.warn('⚠️ Resposta sem sucesso ou sem dados:', { 
+            success: res.success, 
+            hasData: !!res.data,
+            message: res.message 
+          });
+          this.allAppointments = [];
         }
         this.loading = false;
         this.cdr.detectChanges();
@@ -202,6 +215,13 @@ export class AgendaTabComponent implements OnInit, OnChanges {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private formatDateForComparison(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private calculateMetrics(): void {
@@ -272,26 +292,38 @@ export class AgendaTabComponent implements OnInit, OnChanges {
   // Buscar agendamentos para um funcionário em um horário específico
   getAppointmentForSlot(employeeId: number, hourStr: string): LocalAppointment | null {
     const hour = parseInt(hourStr.split(':')[0], 10);
-    const selectedDateStr = this.selectedDate.toISOString().split('T')[0];
+    const selectedDateStr = this.formatDateForComparison(this.selectedDate);
     
     // Encontra o funcionário para comparar por ID ou nome
     const employee = this.employees.find(e => e.id === employeeId);
     
     return this.allAppointments.find(appt => {
-      // Verifica se é do dia selecionado
-      const apptDateStr = appt.dateTime.toISOString().split('T')[0];
+      // Verifica se é do dia selecionado (usando formatação local)
+      const apptDateStr = this.formatDateForComparison(appt.dateTime);
       if (apptDateStr !== selectedDateStr) return false;
       
       // Verifica se o agendamento é do funcionário correto (por ID ou nome como fallback)
       const empMatch = appt.employee?.id === employeeId || 
                       (employee && appt.employee?.name === employee.name);
-      if (!empMatch) return false;
+      if (!empMatch) {
+        // Debug apenas se não encontrar
+        if (this.allAppointments.length <= 5) {
+          console.log('🔍 Funcionário não corresponde:', {
+            apptEmployeeId: appt.employee?.id,
+            targetEmployeeId: employeeId,
+            apptEmployeeName: appt.employee?.name,
+            targetEmployeeName: employee?.name
+          });
+        }
+        return false;
+      }
       
       // Verifica se o horário do agendamento corresponde ao slot
       const apptHour = appt.dateTime.getHours();
+      const apptMinutes = appt.dateTime.getMinutes();
       
-      // Agendamento que começa neste horário
-      if (apptHour === hour) {
+      // Agendamento que começa neste horário (ou nos primeiros minutos)
+      if (apptHour === hour && apptMinutes < 30) {
         return true;
       }
       
@@ -300,8 +332,9 @@ export class AgendaTabComponent implements OnInit, OnChanges {
         const duration = this.getServiceDuration(appt);
         const endTime = new Date(appt.dateTime.getTime() + duration * 60000);
         const endHour = endTime.getHours();
+        const endMinutes = endTime.getMinutes();
         // Se o agendamento termina depois deste horário, ele ocupa este slot
-        return endHour > hour || (endHour === hour && endTime.getMinutes() > 0);
+        return endHour > hour || (endHour === hour && endMinutes > 0);
       }
       
       return false;
@@ -311,26 +344,28 @@ export class AgendaTabComponent implements OnInit, OnChanges {
   // Verifica se um slot está ocupado por um agendamento que começou antes
   isSlotOccupiedByPrevious(employeeId: number, hourStr: string): LocalAppointment | null {
     const hour = parseInt(hourStr.split(':')[0], 10);
-    const selectedDateStr = this.selectedDate.toISOString().split('T')[0];
+    const selectedDateStr = this.formatDateForComparison(this.selectedDate);
     
     return this.allAppointments.find(appt => {
       // Verifica se é do dia selecionado
-      const apptDateStr = appt.dateTime.toISOString().split('T')[0];
+      const apptDateStr = this.formatDateForComparison(appt.dateTime);
       if (apptDateStr !== selectedDateStr) return false;
       
       // Verifica se é do funcionário correto
       if (appt.employee?.id !== employeeId) return false;
       
       const apptHour = appt.dateTime.getHours();
+      const apptMinutes = appt.dateTime.getMinutes();
       
       // Só mostra como "continuação" se o agendamento começou ANTES deste horário
       // e ainda está ocupando este slot (mas não começou neste horário)
-      if (apptHour < hour) {
+      if (apptHour < hour || (apptHour === hour && apptMinutes >= 30)) {
         const duration = this.getServiceDuration(appt);
         const endTime = new Date(appt.dateTime.getTime() + duration * 60000);
         const endHour = endTime.getHours();
+        const endMinutes = endTime.getMinutes();
         // Se o agendamento termina depois deste horário, ele ocupa este slot
-        return endHour > hour || (endHour === hour && endTime.getMinutes() > 0);
+        return endHour > hour || (endHour === hour && endMinutes > 0);
       }
       
       return false;
