@@ -144,16 +144,102 @@ export class AgendaTabComponent implements OnInit, OnChanges {
             console.log('📋 Primeiro agendamento recebido:', appointmentsArray[0]);
           }
           
-          // Mapear agendamentos
-          const mapped = appointmentsArray.map((a: Appointment) => {
+          // Mapear agendamentos e normalizar dados
+          const mapped = appointmentsArray.map((a: any) => {
             const dateTime = new Date(a.startDateTime);
-            return {
+            
+            // Normalizar serviços - pode vir em diferentes formatos
+            let normalizedServices: any[] | undefined = undefined;
+            let normalizedService: any | undefined = undefined;
+            
+            // Tenta services (array)
+            if (a.services && Array.isArray(a.services) && a.services.length > 0) {
+              normalizedServices = a.services.map((s: any) => ({
+                id: s.id || s.Id || s.serviceId || s.ServiceId,
+                name: s.name || s.Name || s.serviceName || s.ServiceName || 'Serviço',
+                duration: s.duration || s.Duration || s.durationMinutes || 60,
+                price: s.price || s.Price || s.servicePrice || 0
+              }));
+            }
+            
+            // Tenta service (objeto único)
+            if (a.service && typeof a.service === 'object') {
+              normalizedService = {
+                id: a.service.id || a.service.Id || a.service.serviceId,
+                name: a.service.name || a.service.Name || a.service.serviceName || 'Serviço',
+                duration: a.service.duration || a.service.Duration || a.service.durationMinutes || 60,
+                price: a.service.price || a.service.Price || a.service.servicePrice || 0
+              };
+            }
+            
+            // Tenta servicesJson
+            if (a.servicesJson && typeof a.servicesJson === 'string') {
+              try {
+                const parsed = JSON.parse(a.servicesJson);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  normalizedServices = parsed.map((s: any) => ({
+                    id: s.id || s.Id || s.serviceId || s.ServiceId,
+                    name: s.name || s.Name || s.serviceName || s.ServiceName || 'Serviço',
+                    duration: s.duration || s.Duration || s.durationMinutes || 60,
+                    price: s.price || s.Price || s.servicePrice || 0
+                  }));
+                } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                  normalizedService = {
+                    id: parsed.id || parsed.Id || parsed.serviceId,
+                    name: parsed.name || parsed.Name || parsed.serviceName || 'Serviço',
+                    duration: parsed.duration || parsed.Duration || parsed.durationMinutes || 60,
+                    price: parsed.price || parsed.Price || parsed.servicePrice || 0
+                  };
+                }
+              } catch (e) {
+                console.warn('⚠️ Erro ao parsear servicesJson:', e);
+              }
+            }
+            
+            // Retorna agendamento normalizado
+            const normalized: any = {
               ...a,
               dateTime: dateTime
             };
+            
+            // Adiciona serviços normalizados se existirem
+            if (normalizedServices) {
+              normalized.services = normalizedServices;
+            } else if (a.services) {
+              normalized.services = a.services;
+            }
+            
+            if (normalizedService) {
+              normalized.service = normalizedService;
+            } else if (a.service) {
+              normalized.service = a.service;
+            }
+            
+            // Garantir que campos numéricos sejam números
+            if (a.totalPrice !== undefined) {
+              normalized.totalPrice = parseFloat(String(a.totalPrice)) || 0;
+            }
+            if (a.totalAmount !== undefined) {
+              normalized.totalAmount = parseFloat(String(a.totalAmount)) || 0;
+            }
+            if (a.price !== undefined) {
+              normalized.price = parseFloat(String(a.price)) || 0;
+            }
+            if (a.totalDurationMinutes || a.totalDuration) {
+              normalized.totalDurationMinutes = a.totalDurationMinutes || a.totalDuration;
+            }
+            
+            return normalized;
           }) as LocalAppointment[];
           
           console.log('📋 Agendamentos mapeados:', mapped.length);
+          
+          // Log do primeiro agendamento após normalização
+          if (mapped.length > 0) {
+            console.log('🔧 Primeiro agendamento NORMALIZADO:', JSON.stringify(mapped[0], null, 2));
+            console.log('🔧 Serviços normalizados:', mapped[0].services);
+            console.log('🔧 Serviço único normalizado:', mapped[0].service);
+          }
           
           // Filtrar apenas do dia selecionado e não cancelados
           // Usar comparação de data local para evitar problemas de timezone
@@ -181,21 +267,60 @@ export class AgendaTabComponent implements OnInit, OnChanges {
           console.log('📊 Agendamentos finais (após filtros):', this.allAppointments.length);
           
           if (this.allAppointments.length > 0) {
-            console.log('📝 Primeiro agendamento final:', {
-              id: this.allAppointments[0].id,
-              employee: this.allAppointments[0].employee,
-              employeeId: this.allAppointments[0].employee?.id,
-              dateTime: this.allAppointments[0].dateTime,
-              hour: this.allAppointments[0].dateTime.getHours(),
-              status: this.allAppointments[0].status,
-              services: this.allAppointments[0].services,
-              service: this.allAppointments[0].service,
-              servicesJson: this.allAppointments[0].servicesJson,
-              totalPrice: (this.allAppointments[0] as any).totalPrice,
-              price: (this.allAppointments[0] as any).price,
-              totalAmount: (this.allAppointments[0] as any).totalAmount,
-              calculatedPrice: this.getServicePriceNumber(this.allAppointments[0])
+            const firstAppt = this.allAppointments[0];
+            console.log('📝 Primeiro agendamento final (COMPLETO):', JSON.stringify(firstAppt, null, 2));
+            console.log('📝 Primeiro agendamento final (RESUMO):', {
+              id: firstAppt.id,
+              employee: firstAppt.employee,
+              employeeId: firstAppt.employee?.id,
+              dateTime: firstAppt.dateTime,
+              hour: firstAppt.dateTime.getHours(),
+              status: firstAppt.status,
+              services: firstAppt.services,
+              servicesType: Array.isArray(firstAppt.services) ? 'array' : typeof firstAppt.services,
+              servicesLength: Array.isArray(firstAppt.services) ? firstAppt.services.length : 'N/A',
+              service: firstAppt.service,
+              servicesJson: firstAppt.servicesJson,
+              servicesJsonType: typeof firstAppt.servicesJson,
+              totalPrice: (firstAppt as any).totalPrice,
+              price: (firstAppt as any).price,
+              totalAmount: (firstAppt as any).totalAmount,
+              calculatedPrice: this.getServicePriceNumber(firstAppt),
+              calculatedServiceName: this.getServiceName(firstAppt)
             });
+            
+            // Log detalhado dos serviços
+            if (firstAppt.services && Array.isArray(firstAppt.services)) {
+              console.log('📋 Serviços (array):', firstAppt.services.map((s: any, i: number) => ({
+                index: i,
+                id: s?.id,
+                name: s?.name,
+                nameType: typeof s?.name,
+                price: s?.price,
+                priceType: typeof s?.price,
+                duration: s?.duration,
+                fullObject: s
+              })));
+            }
+            
+            if (firstAppt.service) {
+              console.log('📋 Serviço único:', {
+                id: firstAppt.service.id,
+                name: firstAppt.service.name,
+                nameType: typeof firstAppt.service.name,
+                price: firstAppt.service.price,
+                fullObject: firstAppt.service
+              });
+            }
+            
+            if (firstAppt.servicesJson) {
+              try {
+                const parsed = JSON.parse(firstAppt.servicesJson);
+                console.log('📋 ServicesJson (parsed):', parsed);
+              } catch (e) {
+                console.error('❌ Erro ao parsear servicesJson:', e);
+              }
+            }
           } else {
             console.warn('⚠️ Nenhum agendamento encontrado para o dia:', dateStr);
             if (appointmentsArray.length > 0) {
@@ -386,35 +511,42 @@ export class AgendaTabComponent implements OnInit, OnChanges {
 
   // Helper methods para serviços
   getServiceName(appt: LocalAppointment): string {
-    // Primeiro tenta services (array)
+    // Primeiro tenta services (array) - dados já normalizados
     if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
       const serviceNames = appt.services
-        .filter((s: any) => s && s.name)
-        .map((s: any) => s.name);
+        .filter((s: any) => s && s.name && typeof s.name === 'string' && s.name.trim().length > 0)
+        .map((s: any) => s.name.trim());
+      
       if (serviceNames.length > 0) {
         return serviceNames.join(', ');
       }
     }
-    // Depois tenta service (objeto único)
-    if (appt.service?.name) {
-      return appt.service.name;
+    
+    // Depois tenta service (objeto único) - dados já normalizados
+    if (appt.service && appt.service.name && typeof appt.service.name === 'string' && appt.service.name.trim().length > 0) {
+      return appt.service.name.trim();
     }
-    // Tenta servicesJson se existir (string JSON)
-    if (appt.servicesJson) {
+    
+    // Fallback: tenta servicesJson se ainda não foi normalizado
+    if (appt.servicesJson && typeof appt.servicesJson === 'string') {
       try {
         const parsed = JSON.parse(appt.servicesJson);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const serviceNames = parsed
-            .filter((s: any) => s && s.name)
-            .map((s: any) => s.name);
-          if (serviceNames.length > 0) {
+            .filter((s: any) => s && (s.name || s.Name || s.serviceName))
+            .map((s: any) => (s.name || s.Name || s.serviceName || 'Serviço').trim());
+          
+          if (serviceNames.length > 0 && serviceNames[0] !== 'Serviço') {
             return serviceNames.join(', ');
           }
+        } else if (parsed && typeof parsed === 'object' && parsed.name) {
+          return String(parsed.name || parsed.Name || parsed.serviceName || 'Serviço').trim();
         }
       } catch (e) {
         // Ignora erro de parsing
       }
     }
+    
     return 'Serviço';
   }
 
