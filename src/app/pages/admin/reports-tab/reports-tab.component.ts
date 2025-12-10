@@ -48,9 +48,12 @@ interface DayStats {
 })
 export class ReportsTabComponent implements OnInit, OnChanges {
   @Input() companyId!: number;
+  @Input() active: boolean = false;
 
   // Filtros
   selectedPeriod: '7' | '30' | '90' | '365' = '30';
+  
+  private dataLoaded: boolean = false;
   
   // Data
   appointments: LocalAppointment[] = [];
@@ -77,13 +80,34 @@ export class ReportsTabComponent implements OnInit, OnChanges {
   ) {}
 
   ngOnInit(): void {
-    if (this.companyId) {
+    console.log('📊 ReportsTabComponent ngOnInit - companyId:', this.companyId, 'active:', this.active);
+    if (this.companyId && this.companyId > 0) {
       this.loadData();
+    } else {
+      console.warn('⚠️ ReportsTabComponent: companyId não está disponível ainda, tentando novamente em breve...');
+      // Tentar novamente após um pequeno delay caso o companyId ainda não esteja disponível
+      setTimeout(() => {
+        if (this.companyId && this.companyId > 0 && !this.dataLoaded) {
+          console.log('📊 ReportsTabComponent: Tentando carregar dados novamente após delay...');
+          this.loadData();
+        }
+      }, 100);
     }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['companyId'] && this.companyId) {
+    console.log('📊 ReportsTabComponent ngOnChanges - changes:', changes);
+    if (changes['companyId']) {
+      console.log('📊 ReportsTabComponent: companyId mudou de', changes['companyId'].previousValue, 'para', changes['companyId'].currentValue);
+      if (this.companyId && this.companyId > 0) {
+        this.dataLoaded = false;
+        this.loadData();
+      }
+    }
+    
+    // Recarregar dados quando a aba for ativada pela primeira vez
+    if (changes['active'] && this.active && !this.dataLoaded && this.companyId && this.companyId > 0) {
+      console.log('📊 ReportsTabComponent: Aba ativada, carregando dados...');
       this.loadData();
     }
   }
@@ -93,7 +117,17 @@ export class ReportsTabComponent implements OnInit, OnChanges {
   }
 
   private loadData(): void {
+    console.log('📊 ReportsTabComponent: loadData iniciado - companyId:', this.companyId, 'period:', this.selectedPeriod);
+    
+    if (!this.companyId || this.companyId === 0) {
+      console.error('❌ ReportsTabComponent: companyId inválido, não é possível carregar dados');
+      this.loading = false;
+      this.cdr.detectChanges();
+      return;
+    }
+    
     this.loading = true;
+    this.cdr.detectChanges();
     
     const end = new Date();
     const start = new Date();
@@ -101,6 +135,8 @@ export class ReportsTabComponent implements OnInit, OnChanges {
 
     const startStr = start.toISOString().split('T')[0];
     const endStr = end.toISOString().split('T')[0];
+    
+    console.log('📊 ReportsTabComponent: Buscando agendamentos de', startStr, 'até', endStr);
 
     // Carregar serviços primeiro (para usar quando necessário)
     if (this.allServices.length === 0) {
@@ -124,9 +160,13 @@ export class ReportsTabComponent implements OnInit, OnChanges {
   }
 
   private loadAppointmentsData(startStr: string, endStr: string): void {
+    console.log('📊 ReportsTabComponent: Chamando API getAppointmentsWeek com params:', { start: startStr, end: endStr, companyId: this.companyId });
+    
     this.api.getAppointmentsWeek({ start: startStr, end: endStr, companyId: this.companyId }).subscribe({
       next: (res) => {
+        console.log('📊 ReportsTabComponent: Resposta da API recebida:', res);
         if (res.success && res.data) {
+          console.log('📊 ReportsTabComponent: Total de agendamentos recebidos:', res.data.length);
           // Normalizar agendamentos (mesma lógica do agenda-tab)
           this.appointments = res.data.map((a: any) => {
             const dateTime = new Date(a.startDateTime);
@@ -266,13 +306,28 @@ export class ReportsTabComponent implements OnInit, OnChanges {
           this.calculateEmployeeRanking();
           this.calculateDayStats();
           this.lastUpdate = new Date();
+          this.dataLoaded = true;
+          
+          console.log('📊 ReportsTabComponent: KPIs calculados:', this.kpis);
+          console.log('📊 ReportsTabComponent: Service Ranking:', this.serviceRanking.length, 'itens');
+          console.log('📊 ReportsTabComponent: Employee Ranking:', this.employeeRanking.length, 'itens');
+        } else {
+          console.warn('⚠️ ReportsTabComponent: Resposta da API não tem sucesso ou dados vazios:', res);
+          this.appointments = [];
+          this.dataLoaded = true;
         }
         this.loading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('❌ Erro ao carregar agendamentos:', err);
+        console.error('❌ ReportsTabComponent: Erro ao carregar agendamentos:', err);
+        console.error('❌ Erro detalhado:', {
+          status: err?.status,
+          message: err?.message,
+          error: err?.error
+        });
         this.appointments = [];
+        this.dataLoaded = true;
         this.loading = false;
         this.cdr.detectChanges();
       }
