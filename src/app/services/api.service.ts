@@ -470,7 +470,14 @@ export class ApiService {
 
   private handleError(operation = 'operation'): (error: any) => Observable<never> {
     return (error: any): Observable<never> => {
-      console.error(`[ApiService ${operation}] Full Error:`, error);
+      // Log detalhado apenas para erros não-500 ou em desenvolvimento
+      if (error.status !== 500) {
+        console.error(`[ApiService ${operation}] Full Error:`, error);
+      } else {
+        // Para erro 500, log mais silencioso (problema conhecido do backend)
+        console.warn(`[ApiService ${operation}] Erro 500 do servidor`);
+      }
+      
       let msg = 'Algo deu errado! Tente novamente.';
       if (error.error?.message) msg = error.error.message;
       else if (error.status === 401) msg = 'Sessão expirada. Faça login novamente.';

@@ -280,13 +280,19 @@ export class AgendaTabComponent implements OnInit, OnChanges {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('❌ Erro ao carregar agendamentos:', err);
-        console.error('❌ Detalhes do erro:', {
-          status: err.status,
-          message: err.message,
-          error: err.error,
-          url: err.url
-        });
+        // Log detalhado apenas em desenvolvimento ou para erros não-500
+        if (err.status !== 500) {
+          console.error('❌ Erro ao carregar agendamentos:', err);
+          console.error('❌ Detalhes do erro:', {
+            status: err.status,
+            message: err.message,
+            error: err.error,
+            url: err.url
+          });
+        } else {
+          // Para erro 500, log mais silencioso (problema conhecido do backend)
+          console.warn('⚠️ Erro 500 ao carregar agendamentos da API - continuando sem dados');
+        }
         
         // Em caso de erro, inicializar com array vazio para não quebrar a UI
         this.allAppointments = [];
@@ -297,12 +303,6 @@ export class AgendaTabComponent implements OnInit, OnChanges {
           topEmployee: null,
           occupancyRate: 0
         };
-        
-        // Mostrar toast apenas se não for erro de autenticação (401/403)
-        if (err.status !== 401 && err.status !== 403) {
-          // Não mostrar toast aqui para não poluir a UI - o admin-general já mostra erro
-          console.warn('⚠️ Erro ao carregar agendamentos, mas continuando sem dados');
-        }
         
         this.loading = false;
         this.cdr.detectChanges();
