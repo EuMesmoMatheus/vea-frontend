@@ -391,10 +391,35 @@ export class ReportsTabComponent implements OnInit, OnChanges {
   // Helpers
   private getServiceName(appt: LocalAppointment): string {
     if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
-      return appt.services.map((s: any) => s.name).join(', ');
+      const servicesLength = appt.services.length;
+      const names = appt.services.map((s: any) => s?.name || 'Serviço').filter((n: string) => n !== 'Serviço' || servicesLength === 1);
+      if (names.length > 0) return names.join(', ');
     }
     if (appt.service?.name) {
       return appt.service.name;
+    }
+    // Se servicesJson existe mas services[] não foi carregado, tentar carregar pelo ID
+    if (appt.servicesJson && typeof appt.servicesJson === 'string' && appt.servicesJson.trim()) {
+      try {
+        // Tentar parsear como JSON primeiro
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const names = parsed.map((s: any) => s?.name || s?.Name || 'Serviço').filter((n: string) => n !== 'Serviço' || parsed.length === 1);
+          if (names.length > 0) return names.join(', ');
+        } else if (parsed && typeof parsed === 'object' && parsed.name) {
+          return parsed.name || parsed.Name || 'Serviço';
+        }
+      } catch (e) {
+        // Se não for JSON, tratar como string de IDs separados por vírgula
+        const serviceIds = appt.servicesJson.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+        if (serviceIds.length > 0 && this.allServices.length > 0) {
+          const names = serviceIds.map((id: number) => {
+            const service = this.allServices.find(s => s.id === id);
+            return service?.name || 'Serviço';
+          }).filter((n: string) => n !== 'Serviço' || serviceIds.length === 1);
+          if (names.length > 0) return names.join(', ');
+        }
+      }
     }
     return 'Serviço';
   }
@@ -449,20 +474,40 @@ export class ReportsTabComponent implements OnInit, OnChanges {
       if (price > 0) return price;
     }
     
-    // Prioridade 4: Verificar servicesJson (se for string JSON)
+    // Prioridade 4: Verificar servicesJson (se for string JSON ou IDs)
     if (appt.servicesJson) {
       try {
+        // Tentar parsear como JSON primeiro
         const parsed = JSON.parse(appt.servicesJson);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const total = parsed.reduce((sum: number, s: any) => {
             if (!s) return sum;
-            const price = this.toNumber(s.price);
+            const price = this.toNumber(s.price || s.Price);
             return sum + price;
           }, 0);
           if (total > 0) return total;
+        } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const price = this.toNumber(parsed.price || parsed.Price);
+          if (price > 0) return price;
         }
       } catch (e) {
-        // Ignora erro de parse
+        // Se não for JSON, tratar como string de IDs separados por vírgula
+        try {
+          const serviceIds = appt.servicesJson.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+          if (serviceIds.length > 0 && this.allServices.length > 0) {
+            const total = serviceIds.reduce((sum: number, id: number) => {
+              const service = this.allServices.find(s => s.id === id);
+              if (service) {
+                const price = this.toNumber(service.price);
+                return sum + price;
+              }
+              return sum;
+            }, 0);
+            if (total > 0) return total;
+          }
+        } catch (err) {
+          // Ignora erro
+        }
       }
     }
     

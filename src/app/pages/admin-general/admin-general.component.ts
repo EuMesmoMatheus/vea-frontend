@@ -109,6 +109,7 @@ export class AdminGeneralComponent implements OnInit {
   employees: Employee[] = [];
   roles: Role[] = [];
   services: Service[] = [];
+  allServices: Service[] = []; // Cache de serviços para carregar pelo ID
   appointments: LocalAppointment[] = [];  // <<< FIX: Agora usa LocalAppointment
   serviceReports: ServiceReport[] = [];
   companyForm!: FormGroup;
@@ -215,13 +216,65 @@ export class AdminGeneralComponent implements OnInit {
         
         // FIX DEFINITIVO: Map garante companyId como number (resolve assignable no binding)
         this.loadServices(this.companyId, responses.services);
+        // Cache de serviços para uso na normalização
+        this.allServices = this.services;
         
         // <<< FIX: Mapeamento corrigido para LocalAppointment (usa startDateTime do ApiAppointment)
         // Se appointments falhou, usar array vazio
-        this.appointments = (responses.appointments?.success === true ? (responses.appointments.data || []) : []).map((a: ApiAppointment) => ({
-          ...a,
-          dateTime: new Date(a.startDateTime)  // <<< Adiciona dateTime local
-        })) as LocalAppointment[];
+        const rawAppointments = (responses.appointments?.success === true ? (responses.appointments.data || []) : []);
+        console.log('📦 Agendamentos brutos recebidos:', rawAppointments.length);
+        
+        // Normalizar agendamentos e carregar serviços quando necessário
+        this.appointments = rawAppointments.map((a: any) => {
+          const dateTime = new Date(a.startDateTime);
+          const normalized: any = {
+            ...a,
+            dateTime: dateTime
+          };
+          
+          // Garantir que totalPrice seja número
+          if (a.totalPrice !== undefined && a.totalPrice !== null) {
+            normalized.totalPrice = typeof a.totalPrice === 'number' ? a.totalPrice : parseFloat(String(a.totalPrice)) || 0;
+          }
+          
+          // Se services[] não vier completo, mas servicesJson existir, carregar pelo ID
+          if (a.services && Array.isArray(a.services) && a.services.length > 0) {
+            normalized.services = a.services.map((s: any) => ({
+              ...s,
+              price: typeof s.price === 'number' ? s.price : parseFloat(String(s.price)) || 0
+            }));
+          } else if (a.servicesJson && typeof a.servicesJson === 'string' && a.servicesJson.trim()) {
+            // ServicesJson é uma string com IDs separados por vírgula (ex: "1,2,3")
+            try {
+              const serviceIds = a.servicesJson.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+              if (serviceIds.length > 0 && this.allServices.length > 0) {
+                const loadedServices = serviceIds.map((id: number) => {
+                  const service = this.allServices.find(s => s.id === id);
+                  if (service) {
+                    return {
+                      id: service.id,
+                      name: service.name,
+                      duration: service.duration,
+                      price: typeof service.price === 'number' ? service.price : parseFloat(String(service.price)) || 0
+                    };
+                  }
+                  return null;
+                }).filter((s: any) => s !== null);
+                
+                if (loadedServices.length > 0) {
+                  normalized.services = loadedServices;
+                  console.log('✅ Serviços carregados pelo ID no admin-general:', loadedServices);
+                }
+              }
+            } catch (e) {
+              console.error('❌ Erro ao processar servicesJson:', e, a.servicesJson);
+            }
+          }
+          
+          return normalized;
+        }) as LocalAppointment[];
+        
+        console.log('📋 Agendamentos normalizados:', this.appointments.length);
 
         // Safe report generation (price agora é number garantido)
         const reportsMap = new Map<string, ServiceReport>();
