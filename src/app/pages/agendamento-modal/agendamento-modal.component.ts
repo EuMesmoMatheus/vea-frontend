@@ -206,7 +206,11 @@ export class AgendamentoModalComponent implements OnChanges {
   }
 
   get totalPrice(): number {
-    return this.selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+    // Price já vem como número da API
+    return this.selectedServices.reduce((sum, s) => {
+      const price = typeof s.price === 'number' ? s.price : parseFloat(String(s.price || 0)) || 0;
+      return sum + price;
+    }, 0);
   }
 
   // MÉTODO CORRIGIDO — ERA "canConfirmConfirm" (ERRO MEU!)
@@ -216,25 +220,38 @@ export class AgendamentoModalComponent implements OnChanges {
     this.loading = true;
     const startDateTime = `${this.selectedDate}T${this.selectedTimeSlot}:00`;
 
+    // Calcular preço total e duração total
+    const totalPrice = this.totalPrice;
+    const totalDuration = this.totalDuration;
+
     const payload = {
       companyId: this.companyId,
       serviceIds: this.selectedServices.map(s => s.id),
       employeeId: this.selectedEmployee!.id,
       clientId: this.clientId,
-      startDateTime
+      startDateTime,
+      totalPrice: totalPrice, // Adiciona o preço total
+      totalDurationMinutes: totalDuration // Adiciona a duração total
     };
+
+    console.log('📤 Payload do agendamento:', payload);
+    console.log('💰 Preço total calculado:', totalPrice);
+    console.log('⏱️ Duração total:', totalDuration);
 
     this.api.createAppointment(payload).subscribe({
       next: (res) => {
         if (res.success) {
+          console.log('✅ Agendamento criado com sucesso:', res);
           this.toast.success('Agendamento confirmado com sucesso! ✅');
           this.close.emit({ success: true });
         } else {
+          console.error('❌ Erro na resposta:', res);
           this.toast.error('Erro ao agendar. Tente novamente.');
         }
         this.loading = false;
       },
-      error: () => {
+      error: (err) => {
+        console.error('❌ Erro ao criar agendamento:', err);
         this.toast.error('Erro ao agendar. Tente novamente. ❌');
         this.loading = false;
       }
