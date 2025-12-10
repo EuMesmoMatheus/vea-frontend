@@ -79,6 +79,9 @@ export interface Appointment {
   clientId?: number;
   servicesJson?: string;
   totalDurationMinutes?: number;
+  totalPrice?: number;
+  totalAmount?: number;
+  price?: number;
   employee?: Employee;
   service?: {
     id: number;

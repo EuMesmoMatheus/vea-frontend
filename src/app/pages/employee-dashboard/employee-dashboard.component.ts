@@ -371,7 +371,14 @@ export class EmployeeDashboardComponent implements OnInit {
   }
 
   getTotalPrice(services: Array<{ price?: number }>): number {
-    return services.reduce((sum, s) => sum + (s.price || 0), 0);
+    if (!services || !Array.isArray(services) || services.length === 0) {
+      return 0;
+    }
+    return services.reduce((sum, s) => {
+      if (!s) return sum;
+      const price = s.price !== undefined && s.price !== null ? parseFloat(String(s.price)) : 0;
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0);
   }
 
   getServiceDuration(appt: EmployeeAppointment): number {

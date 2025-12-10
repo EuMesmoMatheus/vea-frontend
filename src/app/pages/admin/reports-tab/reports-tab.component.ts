@@ -258,7 +258,7 @@ export class ReportsTabComponent implements OnInit, OnChanges {
     // Helper para converter preço para número
     const parsePrice = (price: any): number => {
       if (price === null || price === undefined) return 0;
-      if (typeof price === 'number') return price;
+      if (typeof price === 'number') return isNaN(price) ? 0 : price;
       if (typeof price === 'string') {
         // Remove formatação brasileira (R$ 50,00 -> 50.00)
         const cleaned = price.replace(/[R$\s]/g, '').replace(',', '.');
@@ -268,32 +268,49 @@ export class ReportsTabComponent implements OnInit, OnChanges {
       return 0;
     };
     
-    // Prioridade 1: Array de serviços (múltiplos serviços)
-    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
-      const total = appt.services.reduce((sum: number, s: any) => {
-        const price = parsePrice(s.price);
-        return sum + price;
-      }, 0);
-      return total;
-    }
+    const apptAny = appt as any;
     
-    // Prioridade 2: Serviço único
-    if (appt.service) {
-      const price = parsePrice(appt.service.price);
+    // Prioridade 1: Verificar campos diretos do agendamento
+    if (apptAny.totalPrice !== undefined && apptAny.totalPrice !== null) {
+      const price = parsePrice(apptAny.totalPrice);
+      if (price > 0) return price;
+    }
+    if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
+      const price = parsePrice(apptAny.totalAmount);
+      if (price > 0) return price;
+    }
+    if (apptAny.price !== undefined && apptAny.price !== null) {
+      const price = parsePrice(apptAny.price);
       if (price > 0) return price;
     }
     
-    // Prioridade 3: Verificar se há totalPrice no agendamento (se a API retornar)
-    if ((appt as any).totalPrice !== undefined) {
-      return parsePrice((appt as any).totalPrice);
+    // Prioridade 2: Array de serviços (múltiplos serviços)
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      const total = appt.services.reduce((sum: number, s: any) => {
+        if (!s) return sum;
+        const price = parsePrice(s.price);
+        return sum + price;
+      }, 0);
+      if (total > 0) return total;
+    }
+    
+    // Prioridade 3: Serviço único
+    if (appt.service?.price !== undefined && appt.service?.price !== null) {
+      const price = parsePrice(appt.service.price);
+      if (price > 0) return price;
     }
     
     // Prioridade 4: Verificar servicesJson (se for string JSON)
     if (appt.servicesJson) {
       try {
-        const services = JSON.parse(appt.servicesJson);
-        if (Array.isArray(services)) {
-          return services.reduce((sum: number, s: any) => sum + parsePrice(s.price), 0);
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const total = parsed.reduce((sum: number, s: any) => {
+            if (!s) return sum;
+            const price = parsePrice(s.price);
+            return sum + price;
+          }, 0);
+          if (total > 0) return total;
         }
       } catch (e) {
         // Ignora erro de parse

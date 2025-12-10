@@ -196,14 +196,16 @@ export class AdminGeneralComponent implements OnInit {
         // Safe report generation (price agora é number garantido)
         const reportsMap = new Map<string, ServiceReport>();
         this.appointments.forEach(a => {
-          if (a.service && a.status === 'Confirmed') {
-            const key = a.service.name;
-            if (!reportsMap.has(key)) {
-              reportsMap.set(key, { name: key, count: 0, totalPrice: 0 });
+          if (a.status === 'Confirmed') {
+            const serviceName = this.getServiceName(a);
+            if (serviceName && serviceName !== 'Serviço') {
+              if (!reportsMap.has(serviceName)) {
+                reportsMap.set(serviceName, { name: serviceName, count: 0, totalPrice: 0 });
+              }
+              const report = reportsMap.get(serviceName)!;
+              report.count++;
+              report.totalPrice += this.getAppointmentPrice(a);
             }
-            const report = reportsMap.get(key)!;
-            report.count++;
-            report.totalPrice += a.service.price || 0;
           }
         });
         this.serviceReports = Array.from(reportsMap.values());
@@ -281,6 +283,91 @@ export class AdminGeneralComponent implements OnInit {
       services: this.services.filter(s => s.active).length,
       employees: this.employees.length
     };
+  }
+
+  // Helper para obter o nome do serviço
+  private getServiceName(appt: ApiAppointment): string {
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      const serviceNames = appt.services
+        .filter((s: any) => s && s.name)
+        .map((s: any) => s.name);
+      if (serviceNames.length > 0) {
+        return serviceNames.join(', ');
+      }
+    }
+    if (appt.service?.name) {
+      return appt.service.name;
+    }
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const serviceNames = parsed
+            .filter((s: any) => s && s.name)
+            .map((s: any) => s.name);
+          if (serviceNames.length > 0) {
+            return serviceNames.join(', ');
+          }
+        }
+      } catch (e) {
+        // Ignora erro de parsing
+      }
+    }
+    return 'Serviço';
+  }
+
+  // Helper para calcular o preço do agendamento
+  private getAppointmentPrice(appt: ApiAppointment): number {
+    const apptAny = appt as any;
+    
+    // Prioridade 1: Verificar campos diretos do agendamento
+    if (apptAny.totalPrice !== undefined && apptAny.totalPrice !== null) {
+      const price = parseFloat(String(apptAny.totalPrice)) || 0;
+      if (price > 0) return price;
+    }
+    if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
+      const price = parseFloat(String(apptAny.totalAmount)) || 0;
+      if (price > 0) return price;
+    }
+    if (apptAny.price !== undefined && apptAny.price !== null) {
+      const price = parseFloat(String(apptAny.price)) || 0;
+      if (price > 0) return price;
+    }
+    
+    // Prioridade 2: Array de serviços
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      const total = appt.services.reduce((sum: number, s: any) => {
+        if (!s) return sum;
+        const price = s.price !== undefined && s.price !== null ? parseFloat(String(s.price)) : 0;
+        return sum + (isNaN(price) ? 0 : price);
+      }, 0);
+      if (total > 0) return total;
+    }
+    
+    // Prioridade 3: Serviço único
+    if (appt.service?.price !== undefined && appt.service?.price !== null) {
+      const price = parseFloat(String(appt.service.price)) || 0;
+      if (price > 0) return price;
+    }
+    
+    // Prioridade 4: servicesJson
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const total = parsed.reduce((sum: number, s: any) => {
+            if (!s) return sum;
+            const price = s.price !== undefined && s.price !== null ? parseFloat(String(s.price)) : 0;
+            return sum + (isNaN(price) ? 0 : price);
+          }, 0);
+          if (total > 0) return total;
+        }
+      } catch (e) {
+        // Ignora erro de parsing
+      }
+    }
+    
+    return 0;
   }
 
   onServiceSaved(service: Service): void {

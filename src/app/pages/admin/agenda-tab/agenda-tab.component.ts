@@ -189,7 +189,12 @@ export class AgendaTabComponent implements OnInit, OnChanges {
               hour: this.allAppointments[0].dateTime.getHours(),
               status: this.allAppointments[0].status,
               services: this.allAppointments[0].services,
-              service: this.allAppointments[0].service
+              service: this.allAppointments[0].service,
+              servicesJson: this.allAppointments[0].servicesJson,
+              totalPrice: (this.allAppointments[0] as any).totalPrice,
+              price: (this.allAppointments[0] as any).price,
+              totalAmount: (this.allAppointments[0] as any).totalAmount,
+              calculatedPrice: this.getServicePriceNumber(this.allAppointments[0])
             });
           } else {
             console.warn('⚠️ Nenhum agendamento encontrado para o dia:', dateStr);
@@ -309,27 +314,13 @@ export class AgendaTabComponent implements OnInit, OnChanges {
     const hour = parseInt(hourStr.split(':')[0], 10);
     const selectedDateStr = this.formatDateForComparison(this.selectedDate);
     
-    // Encontra o funcionário para comparar por ID ou nome
-    const employee = this.employees.find(e => e.id === employeeId);
-    
     return this.allAppointments.find(appt => {
       // Verifica se é do dia selecionado (usando formatação local)
       const apptDateStr = this.formatDateForComparison(appt.dateTime);
       if (apptDateStr !== selectedDateStr) return false;
       
-      // Verifica se o agendamento é do funcionário correto (por ID ou nome como fallback)
-      const empMatch = appt.employee?.id === employeeId || 
-                      (employee && appt.employee?.name === employee.name);
-      if (!empMatch) {
-        // Debug apenas se não encontrar
-        if (this.allAppointments.length <= 5) {
-          console.log('🔍 Funcionário não corresponde:', {
-            apptEmployeeId: appt.employee?.id,
-            targetEmployeeId: employeeId,
-            apptEmployeeName: appt.employee?.name,
-            targetEmployeeName: employee?.name
-          });
-        }
+      // Verifica se o agendamento é do funcionário correto (apenas por ID)
+      if (appt.employee?.id !== employeeId) {
         return false;
       }
       
@@ -395,11 +386,34 @@ export class AgendaTabComponent implements OnInit, OnChanges {
 
   // Helper methods para serviços
   getServiceName(appt: LocalAppointment): string {
+    // Primeiro tenta services (array)
     if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
-      return appt.services.map((s: any) => s.name).join(', ');
+      const serviceNames = appt.services
+        .filter((s: any) => s && s.name)
+        .map((s: any) => s.name);
+      if (serviceNames.length > 0) {
+        return serviceNames.join(', ');
+      }
     }
+    // Depois tenta service (objeto único)
     if (appt.service?.name) {
       return appt.service.name;
+    }
+    // Tenta servicesJson se existir (string JSON)
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const serviceNames = parsed
+            .filter((s: any) => s && s.name)
+            .map((s: any) => s.name);
+          if (serviceNames.length > 0) {
+            return serviceNames.join(', ');
+          }
+        }
+      } catch (e) {
+        // Ignora erro de parsing
+      }
     }
     return 'Serviço';
   }
@@ -409,26 +423,100 @@ export class AgendaTabComponent implements OnInit, OnChanges {
       return appt.totalDurationMinutes;
     }
     if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
-      return appt.services.reduce((sum: number, s: any) => sum + (s.duration || 0), 0);
+      const total = appt.services.reduce((sum: number, s: any) => sum + (s.duration || 0), 0);
+      if (total > 0) return total;
     }
     if (appt.service?.duration) {
       return appt.service.duration;
+    }
+    // Tenta servicesJson se existir
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const total = parsed.reduce((sum: number, s: any) => sum + (s.duration || 0), 0);
+          if (total > 0) return total;
+        }
+      } catch (e) {
+        // Ignora erro de parsing
+      }
     }
     return 60;
   }
 
   getServicePriceNumber(appt: LocalAppointment): number {
+    // Primeiro verifica se há um totalPrice direto no agendamento
+    const apptAny = appt as any;
+    if (apptAny.totalPrice !== undefined && apptAny.totalPrice !== null) {
+      const price = parseFloat(String(apptAny.totalPrice)) || 0;
+      if (price > 0) return price;
+    }
+    if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
+      const price = parseFloat(String(apptAny.totalAmount)) || 0;
+      if (price > 0) return price;
+    }
+    if (apptAny.price !== undefined && apptAny.price !== null) {
+      const price = parseFloat(String(apptAny.price)) || 0;
+      if (price > 0) return price;
+    }
+    
+    // Depois tenta calcular a partir dos serviços (array)
     if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
-      return appt.services.reduce((sum: number, s: any) => sum + (s.price || 0), 0);
+      const total = appt.services.reduce((sum: number, s: any) => {
+        if (!s) return sum;
+        const price = s.price !== undefined && s.price !== null ? parseFloat(String(s.price)) : 0;
+        return sum + (isNaN(price) ? 0 : price);
+      }, 0);
+      if (total > 0) {
+        console.log('💰 Preço calculado de services array:', total, 'para appt', appt.id, appt.services);
+        return total;
+      }
     }
-    if (appt.service?.price) {
-      return appt.service.price;
+    
+    // Tenta service (objeto único)
+    if (appt.service?.price !== undefined && appt.service?.price !== null) {
+      const price = parseFloat(String(appt.service.price)) || 0;
+      if (price > 0) {
+        console.log('💰 Preço de service único:', price, 'para appt', appt.id);
+        return price;
+      }
     }
+    
+    // Tenta servicesJson se existir (string JSON)
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const total = parsed.reduce((sum: number, s: any) => {
+            if (!s) return sum;
+            const price = s.price !== undefined && s.price !== null ? parseFloat(String(s.price)) : 0;
+            return sum + (isNaN(price) ? 0 : price);
+          }, 0);
+          if (total > 0) {
+            console.log('💰 Preço calculado de servicesJson:', total, 'para appt', appt.id);
+            return total;
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ Erro ao parsear servicesJson:', e, 'para appt', appt.id);
+      }
+    }
+    
+    console.warn('⚠️ Nenhum preço encontrado para appt', appt.id, {
+      totalPrice: apptAny.totalPrice,
+      totalAmount: apptAny.totalAmount,
+      price: apptAny.price,
+      services: appt.services,
+      service: appt.service,
+      servicesJson: appt.servicesJson
+    });
+    
     return 0;
   }
 
   getServicePrice(appt: LocalAppointment): string {
-    return this.getServicePriceNumber(appt).toFixed(2);
+    const price = this.getServicePriceNumber(appt);
+    return price.toFixed(2).replace('.', ',');
   }
 
   getStatusIcon(status: string): string {

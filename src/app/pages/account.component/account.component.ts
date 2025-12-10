@@ -220,4 +220,63 @@ export class AccountComponent implements OnInit {
     };
     return map[appt.status] || 'bg-gray-100 text-gray-800';
   }
+
+  // CALCULA O PREÇO TOTAL DO AGENDAMENTO
+  getTotalPrice(appt: Appointment): number {
+    const apptAny = appt as any;
+    
+    // Prioridade 1: Verificar campos diretos do agendamento
+    if (apptAny.totalPrice !== undefined && apptAny.totalPrice !== null) {
+      const price = parseFloat(String(apptAny.totalPrice)) || 0;
+      if (price > 0) return price;
+    }
+    if (apptAny.totalAmount !== undefined && apptAny.totalAmount !== null) {
+      const price = parseFloat(String(apptAny.totalAmount)) || 0;
+      if (price > 0) return price;
+    }
+    if (apptAny.price !== undefined && apptAny.price !== null) {
+      const price = parseFloat(String(apptAny.price)) || 0;
+      if (price > 0) return price;
+    }
+    
+    // Prioridade 2: Array de serviços
+    if (appt.services && Array.isArray(appt.services) && appt.services.length > 0) {
+      const total = appt.services.reduce((sum: number, s: any) => {
+        if (!s) return sum;
+        const price = s.price !== undefined && s.price !== null ? parseFloat(String(s.price)) : 0;
+        return sum + (isNaN(price) ? 0 : price);
+      }, 0);
+      if (total > 0) return total;
+    }
+    
+    // Prioridade 3: Serviço único
+    if (appt.service?.price !== undefined && appt.service?.price !== null) {
+      const price = parseFloat(String(appt.service.price)) || 0;
+      if (price > 0) return price;
+    }
+    
+    // Prioridade 4: servicesJson
+    if (appt.servicesJson) {
+      try {
+        const parsed = JSON.parse(appt.servicesJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const total = parsed.reduce((sum: number, s: any) => {
+            if (!s) return sum;
+            const price = s.price !== undefined && s.price !== null ? parseFloat(String(s.price)) : 0;
+            return sum + (isNaN(price) ? 0 : price);
+          }, 0);
+          if (total > 0) return total;
+        }
+      } catch (e) {
+        // Ignora erro de parsing
+      }
+    }
+    
+    return 0;
+  }
+
+  // FORMATA O PREÇO PARA EXIBIÇÃO
+  formatPrice(price: number): string {
+    return price.toFixed(2).replace('.', ',');
+  }
 }
