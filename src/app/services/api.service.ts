@@ -85,6 +85,12 @@ export interface Appointment {
   totalAmount?: number;
   price?: number;
   employee?: Employee;
+  client?: {
+    id: number;
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
   service?: {
     id: number;
     name: string;

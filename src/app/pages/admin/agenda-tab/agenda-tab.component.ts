@@ -56,6 +56,10 @@ export class AgendaTabComponent implements OnInit, OnChanges {
   // UI State
   loading = false;
   isToday = true;
+  
+  // Modal de detalhes
+  showDetailsModal = false;
+  selectedAppointment: LocalAppointment | null = null;
 
   constructor(
     private api: ApiService,
@@ -407,46 +411,8 @@ export class AgendaTabComponent implements OnInit, OnChanges {
     });
   }
 
-  // Buscar agendamentos para um funcionário em um horário específico
-  getAppointmentForSlot(employeeId: number, hourStr: string): LocalAppointment | null {
-    const hour = parseInt(hourStr.split(':')[0], 10);
-    const selectedDateStr = this.formatDateForComparison(this.selectedDate);
-    
-    return this.allAppointments.find(appt => {
-      // Verifica se é do dia selecionado (usando formatação local)
-      const apptDateStr = this.formatDateForComparison(appt.dateTime);
-      if (apptDateStr !== selectedDateStr) return false;
-      
-      // Verifica se o agendamento é do funcionário correto (apenas por ID)
-      if (appt.employee?.id !== employeeId) {
-        return false;
-      }
-      
-      // Verifica se o horário do agendamento corresponde ao slot
-      const apptHour = appt.dateTime.getHours();
-      const apptMinutes = appt.dateTime.getMinutes();
-      
-      // Agendamento que começa neste horário (ou nos primeiros minutos)
-      if (apptHour === hour && apptMinutes < 30) {
-        return true;
-      }
-      
-      // Agendamento que começou antes e ainda está ocupando este slot
-      if (apptHour < hour) {
-        const duration = this.getServiceDuration(appt);
-        const endTime = new Date(appt.dateTime.getTime() + duration * 60000);
-        const endHour = endTime.getHours();
-        const endMinutes = endTime.getMinutes();
-        // Se o agendamento termina depois deste horário, ele ocupa este slot
-        return endHour > hour || (endHour === hour && endMinutes > 0);
-      }
-      
-      return false;
-    }) || null;
-  }
-
-  // Verifica se um slot está ocupado por um agendamento que começou antes
-  isSlotOccupiedByPrevious(employeeId: number, hourStr: string): LocalAppointment | null {
+  // Buscar agendamento que COMEÇA neste slot (para renderizar com rowspan)
+  getAppointmentStartingAtSlot(employeeId: number, hourStr: string): LocalAppointment | null {
     const hour = parseInt(hourStr.split(':')[0], 10);
     const selectedDateStr = this.formatDateForComparison(this.selectedDate);
     
@@ -455,26 +421,47 @@ export class AgendaTabComponent implements OnInit, OnChanges {
       const apptDateStr = this.formatDateForComparison(appt.dateTime);
       if (apptDateStr !== selectedDateStr) return false;
       
-      // Verifica se é do funcionário correto
+      // Verifica se o agendamento é do funcionário correto
+      if (appt.employee?.id !== employeeId) return false;
+      
+      // Verifica se o agendamento COMEÇA neste horário (primeiros 30 minutos)
+      const apptHour = appt.dateTime.getHours();
+      const apptMinutes = appt.dateTime.getMinutes();
+      
+      return apptHour === hour && apptMinutes < 30;
+    }) || null;
+  }
+  
+  // Verifica se um slot está ocupado por um agendamento (mas não é o início)
+  isSlotOccupiedByAppointment(employeeId: number, hourStr: string): boolean {
+    const hour = parseInt(hourStr.split(':')[0], 10);
+    const selectedDateStr = this.formatDateForComparison(this.selectedDate);
+    
+    return this.allAppointments.some(appt => {
+      const apptDateStr = this.formatDateForComparison(appt.dateTime);
+      if (apptDateStr !== selectedDateStr) return false;
       if (appt.employee?.id !== employeeId) return false;
       
       const apptHour = appt.dateTime.getHours();
       const apptMinutes = appt.dateTime.getMinutes();
       
-      // Só mostra como "continuação" se o agendamento começou ANTES deste horário
-      // e ainda está ocupando este slot (mas não começou neste horário)
-      if (apptHour < hour || (apptHour === hour && apptMinutes >= 30)) {
-        const duration = this.getServiceDuration(appt);
-        const endTime = new Date(appt.dateTime.getTime() + duration * 60000);
-        const endHour = endTime.getHours();
-        const endMinutes = endTime.getMinutes();
-        // Se o agendamento termina depois deste horário, ele ocupa este slot
-        return endHour > hour || (endHour === hour && endMinutes > 0);
-      }
+      // Se começa neste slot, não é ocupação (é o início)
+      if (apptHour === hour && apptMinutes < 30) return false;
       
-      return false;
-    }) || null;
+      // Verifica se este slot está dentro do agendamento
+      const duration = this.getServiceDuration(appt);
+      const startTime = appt.dateTime;
+      const endTime = new Date(startTime.getTime() + duration * 60000);
+      
+      const slotStart = new Date(startTime);
+      slotStart.setHours(hour, 0, 0, 0);
+      const slotEnd = new Date(slotStart);
+      slotEnd.setHours(hour + 1, 0, 0, 0);
+      
+      return startTime < slotEnd && endTime > slotStart;
+    });
   }
+
 
   // Calcula quantos slots um agendamento ocupa
   getSlotSpan(appt: LocalAppointment): number {
@@ -580,35 +567,17 @@ export class AgendaTabComponent implements OnInit, OnChanges {
     }
   }
 
-  async cancelAppointment(appt: LocalAppointment, event: Event): Promise<void> {
+  // Abre modal de detalhes
+  openDetailsModal(appt: LocalAppointment, event: Event): void {
     event.stopPropagation();
-    
-    const confirmed = await this.confirmService.danger(
-      'Deseja cancelar este agendamento?',
-      'Cancelar Agendamento'
-    );
-
-    if (confirmed) {
-      this.api.cancelAppointment(appt.id).subscribe({
-        next: (res) => {
-          if (res.success) {
-            this.loadData();
-            this.apptCancelled.emit();
-            this.toast.success('Agendamento cancelado! ✅');
-          }
-        },
-        error: () => this.toast.error('Erro ao cancelar. ❌')
-      });
-    }
+    this.selectedAppointment = appt;
+    this.showDetailsModal = true;
   }
 
-  canCancel(appt: LocalAppointment): boolean {
-    if (appt.status === 'Cancelled') return false;
-    const now = new Date();
-    const end = appt.endDateTime
-      ? new Date(appt.endDateTime)
-      : new Date(appt.dateTime.getTime() + this.getServiceDuration(appt) * 60000);
-    return end > now;
+  // Fecha modal de detalhes
+  closeDetailsModal(): void {
+    this.showDetailsModal = false;
+    this.selectedAppointment = null;
   }
 
   exportCalendar(): void {

@@ -97,26 +97,19 @@
             </td>
             
             <!-- Colunas de funcionários -->
-            <td 
-              *ngFor="let emp of employees" 
-              class="p-1.5 sm:p-2 align-top border-r border-gray-100 last:border-r-0 h-[70px] sm:h-[80px]">
-              
-              <!-- Slot com agendamento -->
-              <ng-container *ngIf="getAppointmentForSlot(emp.id, hour) as appt">
+            <ng-container *ngFor="let emp of employees">
+              <!-- Agendamento que COMEÇA neste slot (renderiza com rowspan) -->
+              <td 
+                *ngIf="getAppointmentStartingAtSlot(emp.id, hour) as appt"
+                [attr.rowspan]="getSlotSpan(appt)"
+                class="p-1.5 sm:p-2 align-top border-r border-gray-100 last:border-r-0">
                 <div 
-                  [class]="'relative p-2 rounded-lg border-l-4 shadow-sm h-full cursor-pointer group transition-all hover:shadow-md ' + getStatusColor(appt.status)"
-                  [title]="getServiceName(appt)">
-                  
-                  <!-- Botão cancelar -->
-                  <button 
-                    *ngIf="canCancel(appt)"
-                    (click)="cancelAppointment(appt, $event)"
-                    class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600 z-10">
-                    ✕
-                  </button>
+                  [class]="'relative p-2 rounded-lg border-l-4 shadow-sm cursor-pointer group transition-all hover:shadow-md h-full flex flex-col justify-between ' + getStatusColor(appt.status)"
+                  (click)="openDetailsModal(appt, $event)"
+                  [title]="'Clique para ver detalhes - ' + getServiceName(appt)">
                   
                   <!-- Conteúdo do card -->
-                  <div class="space-y-0.5">
+                  <div class="space-y-0.5 flex-1">
                     <div class="font-semibold text-[11px] sm:text-xs truncate">
                       {{ getServiceName(appt) }}
                     </div>
@@ -128,23 +121,30 @@
                       <span>{{ getStatusIcon(appt.status) }}</span>
                     </div>
                   </div>
+                  
+                  <!-- Indicador de clique -->
+                  <div class="text-[9px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+                    Clique para detalhes
+                  </div>
                 </div>
-              </ng-container>
+              </td>
 
-              <!-- Slot ocupado por agendamento anterior (mostra continuação) -->
-              <ng-container *ngIf="!getAppointmentForSlot(emp.id, hour) && isSlotOccupiedByPrevious(emp.id, hour) as prevAppt">
-                <div class="h-full bg-gray-100 rounded-lg border-l-4 border-gray-300 opacity-50 flex items-center justify-center">
-                  <span class="text-[10px] text-gray-400">↑ continua</span>
-                </div>
-              </ng-container>
+              <!-- Slot ocupado por agendamento (mas não é o início - já renderizado com rowspan) -->
+              <td 
+                *ngIf="!getAppointmentStartingAtSlot(emp.id, hour) && isSlotOccupiedByAppointment(emp.id, hour)"
+                class="p-1.5 sm:p-2 align-top border-r border-gray-100 last:border-r-0">
+                <!-- Vazio - já está coberto pelo rowspan do slot anterior -->
+              </td>
 
               <!-- Slot vazio -->
-              <div 
-                *ngIf="!getAppointmentForSlot(emp.id, hour) && !isSlotOccupiedByPrevious(emp.id, hour)"
-                class="h-full rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
-                <span class="text-[10px] text-gray-300">—</span>
-              </div>
-            </td>
+              <td 
+                *ngIf="!getAppointmentStartingAtSlot(emp.id, hour) && !isSlotOccupiedByAppointment(emp.id, hour)"
+                class="p-1.5 sm:p-2 align-top border-r border-gray-100 last:border-r-0 h-[70px] sm:h-[80px]">
+                <div class="h-full rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
+                  <span class="text-[10px] text-gray-300">—</span>
+                </div>
+              </td>
+            </ng-container>
           </tr>
         </tbody>
       </table>
@@ -240,5 +240,141 @@
     </div>
     <h3 class="text-lg font-semibold text-gray-700 mb-1">Nenhum agendamento</h3>
     <p class="text-sm text-gray-500">Não há agendamentos para este dia.</p>
+  </div>
+
+  <!-- Modal de Detalhes do Agendamento -->
+  <div 
+    *ngIf="showDetailsModal && selectedAppointment"
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    (click)="closeDetailsModal()">
+    <div 
+      class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+      (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 rounded-t-2xl">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-bold">Detalhes do Agendamento</h3>
+          <button 
+            (click)="closeDetailsModal()"
+            class="p-1 rounded-full hover:bg-white/20 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Conteúdo -->
+      <div class="p-6 space-y-4">
+        <!-- Status -->
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">{{ getStatusIcon(selectedAppointment.status) }}</span>
+          <span [class]="'px-3 py-1 rounded-full text-sm font-semibold ' + getStatusColor(selectedAppointment.status)">
+            {{ selectedAppointment.status === 'Scheduled' ? 'Agendado' : selectedAppointment.status === 'Confirmed' ? 'Confirmado' : 'Cancelado' }}
+          </span>
+        </div>
+
+        <!-- Serviços -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Serviços</h4>
+          <div class="space-y-2">
+            <div *ngIf="selectedAppointment.services && selectedAppointment.services.length > 0" class="space-y-2">
+              <div 
+                *ngFor="let service of selectedAppointment.services"
+                class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div class="font-medium text-gray-800">{{ service.name }}</div>
+                <div class="text-xs text-gray-500 mt-1">
+                  Duração: {{ service.duration }}min • Preço: R$ {{ (service.price || 0).toFixed(2).replace('.', ',') }}
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!selectedAppointment.services || selectedAppointment.services.length === 0" class="text-gray-500 text-sm">
+              {{ getServiceName(selectedAppointment) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Profissional -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Profissional</h4>
+          <div class="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+            <div 
+              *ngIf="!selectedAppointment.employee?.fullPhotoUrl"
+              [class]="'w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ' + getAvatarColor(selectedAppointment.employee?.name || '')">
+              {{ getInitials(selectedAppointment.employee?.name || 'N/A') }}
+            </div>
+            <img 
+              *ngIf="selectedAppointment.employee?.fullPhotoUrl"
+              [src]="selectedAppointment.employee!.fullPhotoUrl"
+              [alt]="selectedAppointment.employee!.name || 'Profissional'"
+              class="w-12 h-12 rounded-full object-cover">
+            <div>
+              <div class="font-medium text-gray-800">{{ selectedAppointment.employee?.name || 'N/A' }}</div>
+              <div class="text-xs text-gray-500">{{ selectedAppointment.employee?.roleName || 'Profissional' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cliente -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Cliente</h4>
+          <div class="bg-gray-50 rounded-lg p-3">
+            <div *ngIf="selectedAppointment.client" class="space-y-1">
+              <div class="font-medium text-gray-800">{{ selectedAppointment.client.name || 'Cliente' }}</div>
+              <div class="text-xs text-gray-500" *ngIf="selectedAppointment.client.email">
+                {{ selectedAppointment.client.email }}
+              </div>
+              <div class="text-xs text-gray-500" *ngIf="selectedAppointment.client.phone">
+                {{ selectedAppointment.client.phone }}
+              </div>
+            </div>
+            <div *ngIf="!selectedAppointment.client" class="text-gray-500 italic">
+              <span *ngIf="selectedAppointment.clientId && selectedAppointment.clientId > 0">
+                ID: {{ selectedAppointment.clientId }} (dados não disponíveis)
+              </span>
+              <span *ngIf="!selectedAppointment.clientId || selectedAppointment.clientId === 0">
+                Visitante (não cadastrado)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Horário -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Horário</h4>
+          <div class="bg-gray-50 rounded-lg p-3 space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500 text-sm">Início:</span>
+              <span class="font-medium text-gray-800">{{ selectedAppointment.dateTime | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500 text-sm">Duração:</span>
+              <span class="font-medium text-gray-800">{{ getServiceDuration(selectedAppointment) }} minutos</span>
+            </div>
+            <div class="flex items-center gap-2" *ngIf="selectedAppointment.endDateTime">
+              <span class="text-gray-500 text-sm">Término:</span>
+              <span class="font-medium text-gray-800">{{ selectedAppointment.endDateTime | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Valor Total -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-2">Valor Total</h4>
+          <div class="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+            <div class="text-2xl font-bold text-emerald-600">R$ {{ getServicePrice(selectedAppointment) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 border-t border-gray-200 flex justify-end">
+        <button 
+          (click)="closeDetailsModal()"
+          class="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors font-medium">
+          Fechar
+        </button>
+      </div>
+    </div>
   </div>
 </div>
